@@ -1,0 +1,72 @@
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <!-- Deployments Analyzed -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-medium">Analyzed</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ report.analyzed_deployments }}</p>
+                <p class="text-xs text-gray-400 mt-1">of {{ report.total_deployments }} total</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-kf-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Savings -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-medium">Monthly Savings</p>
+                <p class="text-2xl font-bold text-kf-green mt-1">${{ "%.2f"|format(report.total_monthly_savings_usd) }}</p>
+                <p class="text-xs text-gray-400 mt-1">${{ "%.0f"|format(report.total_annual_savings_usd) }}/yr projected</p>
+            </div>
+            <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-kf-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avg Waste -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-medium">Avg Waste</p>
+                <p class="text-2xl font-bold mt-1
+                    {% if report.avg_waste_pct > 60 %}text-kf-danger{% elif report.avg_waste_pct > 30 %}text-kf-warn{% else %}text-kf-green{% endif %}">
+                    {{ report.avg_waste_pct|int }}%
+                </p>
+                <p class="text-xs text-gray-400 mt-1">over-provisioning score</p>
+            </div>
+            <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-kf-warn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Saver -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500 font-medium">Top Saver</p>
+                {% if report.top_saver %}
+                <p class="text-lg font-bold text-gray-900 mt-1 truncate max-w-[140px]">{{ report.top_saver.deployment_name }}</p>
+                <p class="text-xs text-kf-green mt-1">${{ "%.2f"|format(report.top_saver.monthly_savings_usd) }}/mo</p>
+                {% else %}
+                <p class="text-lg text-gray-400 mt-1">N/A</p>
+                {% endif %}
+            </div>
+            <div class="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>

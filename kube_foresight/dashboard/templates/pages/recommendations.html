@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}kube-foresight &middot; Recommendations{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Recommendations</h1>
+    <p class="text-sm text-gray-500 mt-1">Right-sizing suggestions for {{ report.analyzed_deployments }} deployments</p>
+</div>
+
+{% if report.recommendations|length == 0 %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+    <p class="text-gray-500 text-lg">No recommendations generated.</p>
+    <p class="text-gray-400 text-sm mt-2">This can happen when all deployments are already right-sized or no deployments were found.</p>
+</div>
+{% else %}
+<!-- Before/After Chart -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Current vs Recommended CPU Requests</h2>
+    <div style="height: 350px;">
+        <canvas id="recommendation-chart"></canvas>
+    </div>
+</div>
+
+<!-- Recommendations Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">All Recommendations</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="?sort=deployment_name" class="hover:text-gray-900">Deployment</a>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU Request</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="?sort=cpu_reduction_pct" class="hover:text-gray-900">CPU &darr;</a>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Memory Request</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="?sort=memory_reduction_pct" class="hover:text-gray-900">Mem &darr;</a>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Strategy</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <a href="?sort=confidence" class="hover:text-gray-900">Confidence</a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% include "partials/recommendation_rows.html" %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+{% if report.recommendations|length > 0 %}
+<script>
+    const reportData = {{ report_json|safe }};
+    document.addEventListener('DOMContentLoaded', function() {
+        renderRecommendationChart('recommendation-chart', reportData.recommendations);
+    });
+</script>
+{% endif %}
+{% endblock %}

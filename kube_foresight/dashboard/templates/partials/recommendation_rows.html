@@ -1,0 +1,30 @@
+{% for r in report.recommendations %}
+<tr class="hover:bg-gray-50 transition-colors">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <a href="/deployments/{{ r.deployment_name }}" class="text-sm font-medium text-kf-accent hover:text-blue-700">{{ r.deployment_name }}</a>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+        {{ r.current_cpu_request_fmt }} &rarr; <span class="text-kf-green font-medium">{{ r.recommended_cpu_request_fmt }}</span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span class="text-sm font-medium {% if r.cpu_reduction_pct > 40 %}text-kf-green{% elif r.cpu_reduction_pct > 20 %}text-kf-warn{% else %}text-gray-700{% endif %}">
+            -{{ r.cpu_reduction_pct }}%
+        </span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+        {{ r.current_memory_request_fmt }} &rarr; <span class="text-kf-green font-medium">{{ r.recommended_memory_request_fmt }}</span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span class="text-sm font-medium {% if r.memory_reduction_pct > 40 %}text-kf-green{% elif r.memory_reduction_pct > 20 %}text-kf-warn{% else %}text-gray-700{% endif %}">
+            -{{ r.memory_reduction_pct }}%
+        </span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm">{{ r.strategy }}</td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+            {% if r.confidence == 'high' %}bg-green-100 text-green-800{% elif r.confidence == 'medium' %}bg-amber-100 text-amber-800{% else %}bg-red-100 text-red-800{% endif %}">
+            {{ r.confidence }}
+        </span>
+    </td>
+</tr>
+{% endfor %}

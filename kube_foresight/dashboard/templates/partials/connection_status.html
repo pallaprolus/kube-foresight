@@ -1,0 +1,7 @@
+<div id="connection-status" class="text-sm mt-2">
+    {% if connected %}
+        <span class="text-kf-green">&#10003; {{ message }}</span>
+    {% else %}
+        <span class="text-kf-danger">&#10007; {{ message }}</span>
+    {% endif %}
+</div>

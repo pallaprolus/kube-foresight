@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kube-foresight"
+version = "0.1.0"
+description = "Predictive Resource Optimizer for Kubernetes — identifies over-provisioned deployments and generates right-sizing patches"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Sudhakar Pallaprolu"}
+]
+keywords = ["kubernetes", "k8s", "resource-optimization", "right-sizing", "cost-savings", "prometheus", "finops"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Systems Administration",
+]
+
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "numpy>=1.24.0",
+    "requests>=2.31.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+k8s = [
+    "kubernetes>=28.1.0",
+]
+dashboard = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.6",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "httpx>=0.25.0",
+]
+
+[project.scripts]
+kube-foresight = "kube_foresight.cli.app:main"
+
+[project.urls]
+Homepage = "https://github.com/pallaprolus/kube-foresight"
+Repository = "https://github.com/pallaprolus/kube-foresight"
+Issues = "https://github.com/pallaprolus/kube-foresight/issues"
+
+[tool.setuptools.packages.find]
+include = ["kube_foresight*"]
+exclude = ["tests*"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"

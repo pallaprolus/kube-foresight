@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}kube-foresight &middot; Overview{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Cluster Overview</h1>
+    <p class="text-sm text-gray-500 mt-1">Namespace: <span class="font-medium text-gray-700">{{ report.namespace }}</span></p>
+</div>
+
+{% if report.analyzed_deployments == 0 %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+    <p class="text-gray-500 text-lg">No deployments found in namespace <span class="font-medium">{{ report.namespace }}</span>.</p>
+    <p class="text-gray-400 text-sm mt-2">Run an analysis from the <a href="/" class="text-kf-accent hover:underline">home page</a> to get started.</p>
+</div>
+{% else %}
+{% include "partials/kpi_cards.html" %}
+
+<!-- Utilization Chart -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Resource Utilization</h2>
+    <div style="height: 350px;">
+        <canvas id="utilization-chart"></canvas>
+    </div>
+</div>
+
+{% include "partials/deployment_table.html" %}
+{% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+{% if report.analyzed_deployments > 0 %}
+<script>
+    const reportData = {{ report_json|safe }};
+    document.addEventListener('DOMContentLoaded', function() {
+        renderUtilizationChart('utilization-chart', reportData.profiles);
+    });
+</script>
+{% endif %}
+{% endblock %}

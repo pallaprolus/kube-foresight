@@ -1,0 +1,45 @@
+/* kube-foresight dashboard custom styles */
+
+/* HTMX indicator */
+.htmx-indicator {
+    display: none;
+}
+.htmx-indicator.htmx-request {
+    display: block;
+}
+
+/* Smooth transitions for navigation highlights */
+nav a {
+    transition: all 0.15s ease-in-out;
+}
+
+/* Table row hover */
+tbody tr {
+    transition: background-color 0.1s ease;
+}
+
+/* Scrollbar styling for code blocks */
+pre::-webkit-scrollbar {
+    height: 6px;
+}
+pre::-webkit-scrollbar-track {
+    background: transparent;
+}
+pre::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+}
+
+/* Chart canvas container */
+canvas {
+    max-width: 100%;
+}
+
+/* Badge pulse animation for running status */
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+.animate-pulse-dot {
+    animation: pulse-dot 2s ease-in-out infinite;
+}

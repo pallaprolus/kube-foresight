@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}kube-foresight &middot; Cost Savings{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Cost Savings</h1>
+    <p class="text-sm text-gray-500 mt-1">Estimated savings based on AWS EKS on-demand pricing (us-east-1, m5 instance family)</p>
+</div>
+
+<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+    <p class="text-xs text-amber-700">
+        <strong>Note:</strong> Cost estimates use AWS EKS on-demand pricing for the m5 instance family in us-east-1.
+        Actual costs may vary by cloud provider, region, instance type, and discount programs (Reserved Instances, Savings Plans, Spot).
+    </p>
+</div>
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+        <p class="text-sm text-gray-500">Monthly Savings</p>
+        <p class="text-3xl font-bold text-kf-green mt-2">${{ "%.2f"|format(report.total_monthly_savings_usd) }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+        <p class="text-sm text-gray-500">Annual Savings</p>
+        <p class="text-3xl font-bold text-kf-green mt-2">${{ "%.0f"|format(report.total_annual_savings_usd) }}</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+        <p class="text-sm text-gray-500">Deployments Optimized</p>
+        <p class="text-3xl font-bold text-gray-900 mt-2">{{ report.analyzed_deployments }}</p>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Donut Chart -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown by Deployment</h2>
+        <div style="height: 320px;">
+            <canvas id="cost-donut"></canvas>
+        </div>
+    </div>
+
+    <!-- Savings Bar Chart -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Monthly Savings per Deployment</h2>
+        <div style="height: 320px;">
+            <canvas id="savings-bar"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Cost Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-900">Detailed Cost Analysis</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deployment</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Replicas</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Current $/mo</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Recommended $/mo</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Savings $/mo</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Annual Savings</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for c in report.costs %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="/deployments/{{ c.deployment_name }}" class="text-sm font-medium text-kf-accent hover:text-blue-700">{{ c.deployment_name }}</a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ c.replica_count }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">${{ "%.2f"|format(c.current_monthly_cost_usd) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">${{ "%.2f"|format(c.recommended_monthly_cost_usd) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-kf-green font-medium text-right">${{ "%.2f"|format(c.monthly_savings_usd) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-kf-green font-medium text-right">${{ "%.2f"|format(c.annual_savings_usd) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-50">
+                <tr class="font-semibold">
+                    <td class="px-6 py-3 text-sm text-gray-900" colspan="4">Total</td>
+                    <td class="px-6 py-3 text-sm text-kf-green text-right">${{ "%.2f"|format(report.total_monthly_savings_usd) }}</td>
+                    <td class="px-6 py-3 text-sm text-kf-green text-right">${{ "%.2f"|format(report.total_annual_savings_usd) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    const reportData = {{ report_json|safe }};
+    document.addEventListener('DOMContentLoaded', function() {
+        renderCostDonut('cost-donut', reportData.costs);
+        renderSavingsBar('savings-bar', reportData.costs);
+    });
+</script>
+{% endblock %}

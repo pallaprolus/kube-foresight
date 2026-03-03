@@ -1,0 +1,62 @@
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Top Over-Provisioned Deployments</h2>
+        <span class="text-sm text-gray-500">{{ report.profiles|length }} shown</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deployment</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU Util</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mem Util</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waste Score</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU Req</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mem Req</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for p in report.profiles %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm font-medium text-gray-900">{{ p.name }}</span>
+                        <span class="block text-xs text-gray-400">{{ p.namespace }} &middot; {{ p.replica_count }} replicas</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                <div class="h-2 rounded-full {% if p.cpu_utilization_pct < 30 %}bg-red-400{% elif p.cpu_utilization_pct < 60 %}bg-amber-400{% else %}bg-green-400{% endif %}"
+                                     style="width: {{ [p.cpu_utilization_pct, 100]|min }}%"></div>
+                            </div>
+                            <span class="text-sm text-gray-700">{{ p.cpu_utilization_pct }}%</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                <div class="h-2 rounded-full {% if p.memory_utilization_pct < 30 %}bg-red-400{% elif p.memory_utilization_pct < 60 %}bg-amber-400{% else %}bg-green-400{% endif %}"
+                                     style="width: {{ [p.memory_utilization_pct, 100]|min }}%"></div>
+                            </div>
+                            <span class="text-sm text-gray-700">{{ p.memory_utilization_pct }}%</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if p.waste_pct > 60 %}bg-red-100 text-red-800{% elif p.waste_pct > 30 %}bg-amber-100 text-amber-800{% else %}bg-green-100 text-green-800{% endif %}">
+                            {{ p.waste_pct|int }}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cpu_request_fmt }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.memory_request_fmt }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                        <a href="/deployments/{{ p.name }}" class="text-kf-accent hover:text-blue-700 text-sm font-medium">
+                            Details &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,121 @@
+"""Domain models for kube-foresight."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+
+
+class ResourceType(str, Enum):
+    CPU = "cpu"
+    MEMORY = "memory"
+
+
+class ConfidenceLevel(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+@dataclass
+class ResourceSpec:
+    """CPU (cores) or Memory (bytes) specification."""
+
+    request: float
+    limit: float
+
+
+@dataclass
+class ContainerMetrics:
+    """Raw time-series metrics for a single container."""
+
+    container_name: str
+    pod_name: str
+    deployment_name: str
+    namespace: str
+    cpu_usage: list[tuple[datetime, float]]  # (timestamp, cores)
+    memory_usage: list[tuple[datetime, float]]  # (timestamp, bytes)
+    cpu_spec: ResourceSpec
+    memory_spec: ResourceSpec
+
+
+@dataclass
+class UsageStats:
+    """Computed usage statistics for a resource."""
+
+    mean: float
+    median: float
+    p95: float
+    p99: float
+    max: float
+    min: float
+    std_dev: float
+    sample_count: int
+
+
+@dataclass
+class DeploymentProfile:
+    """Aggregated profile for a deployment."""
+
+    name: str
+    container_name: str
+    namespace: str
+    replica_count: int
+    cpu_stats: UsageStats
+    memory_stats: UsageStats
+    cpu_spec: ResourceSpec
+    memory_spec: ResourceSpec
+    cpu_utilization_ratio: float
+    memory_utilization_ratio: float
+    over_provisioning_score: float
+
+
+@dataclass
+class Recommendation:
+    """Right-sizing recommendation for a deployment."""
+
+    deployment_name: str
+    container_name: str
+    namespace: str
+    strategy: str
+    headroom: float
+    current_cpu_request: float
+    current_cpu_limit: float
+    current_memory_request: float
+    current_memory_limit: float
+    recommended_cpu_request: float
+    recommended_cpu_limit: float
+    recommended_memory_request: float
+    recommended_memory_limit: float
+    cpu_reduction_pct: float
+    memory_reduction_pct: float
+    confidence: ConfidenceLevel
+
+
+@dataclass
+class CostEstimate:
+    """Monthly cost estimate for a deployment."""
+
+    deployment_name: str
+    namespace: str
+    replica_count: int
+    current_monthly_cost_usd: float
+    recommended_monthly_cost_usd: float
+    monthly_savings_usd: float
+    annual_savings_usd: float
+
+
+@dataclass
+class AnalysisReport:
+    """Complete analysis output."""
+
+    namespace: str
+    total_deployments: int
+    analyzed_deployments: int
+    profiles: list[DeploymentProfile]
+    recommendations: list[Recommendation]
+    cost_estimates: list[CostEstimate]
+    total_monthly_savings_usd: float
+    total_annual_savings_usd: float
+    generated_at: datetime = field(default_factory=datetime.utcnow)

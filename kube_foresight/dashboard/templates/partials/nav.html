@@ -1,0 +1,78 @@
+<aside class="hidden lg:flex flex-col w-64 bg-kf-sidebar text-gray-300 min-h-full">
+    <div class="p-6 border-b border-gray-700">
+        <a href="/" class="flex items-center space-x-3">
+            <svg class="w-8 h-8 text-kf-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <div>
+                <span class="text-white font-bold text-lg">kube-foresight</span>
+                <span class="block text-xs text-gray-500">Resource Optimizer</span>
+            </div>
+        </a>
+    </div>
+
+    <nav class="flex-1 py-4 px-3 space-y-1">
+        <a href="/"
+           class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors
+                  {% if active_page == 'home' %}bg-kf-accent/20 text-kf-accent{% else %}hover:bg-gray-700/50{% endif %}">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Connect
+        </a>
+
+        {% if has_results %}
+        <a href="/overview"
+           class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors
+                  {% if active_page == 'overview' %}bg-kf-accent/20 text-kf-accent{% else %}hover:bg-gray-700/50{% endif %}">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+            </svg>
+            Overview
+        </a>
+
+        <a href="/recommendations"
+           class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors
+                  {% if active_page == 'recommendations' %}bg-kf-accent/20 text-kf-accent{% else %}hover:bg-gray-700/50{% endif %}">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+            Recommendations
+        </a>
+
+        <a href="/costs"
+           class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors
+                  {% if active_page == 'costs' %}bg-kf-accent/20 text-kf-accent{% else %}hover:bg-gray-700/50{% endif %}">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Cost Savings
+        </a>
+
+        <a href="/patches"
+           class="flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors
+                  {% if active_page == 'patches' %}bg-kf-accent/20 text-kf-accent{% else %}hover:bg-gray-700/50{% endif %}">
+            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+            Patches
+        </a>
+        {% endif %}
+    </nav>
+
+    <div class="p-4 border-t border-gray-700 text-xs text-gray-500">
+        <p>kube-foresight v0.1.0</p>
+        <p class="mt-1">
+            Status:
+            {% if status == 'done' %}
+                <span class="text-kf-green">Analysis Complete</span>
+            {% elif status == 'running' %}
+                <span class="text-kf-warn">Running...</span>
+            {% elif status == 'error' %}
+                <span class="text-kf-danger">Error</span>
+            {% else %}
+                <span class="text-gray-400">Idle</span>
+            {% endif %}
+        </p>
+    </div>
+</aside>

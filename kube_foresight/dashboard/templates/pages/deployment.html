@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}kube-foresight &middot; {{ profile.name }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <a href="/overview" class="text-sm text-kf-accent hover:text-blue-700">&larr; Back to Overview</a>
+    <h1 class="text-2xl font-bold text-gray-900 mt-2">{{ profile.name }}</h1>
+    <p class="text-sm text-gray-500">{{ profile.namespace }} &middot; {{ profile.replica_count }} replicas</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <p class="text-sm text-gray-500">CPU Utilization</p>
+        <p class="text-2xl font-bold mt-1 {% if profile.cpu_utilization_pct < 30 %}text-kf-danger{% elif profile.cpu_utilization_pct < 60 %}text-kf-warn{% else %}text-kf-green{% endif %}">
+            {{ profile.cpu_utilization_pct }}%
+        </p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <p class="text-sm text-gray-500">Memory Utilization</p>
+        <p class="text-2xl font-bold mt-1 {% if profile.memory_utilization_pct < 30 %}text-kf-danger{% elif profile.memory_utilization_pct < 60 %}text-kf-warn{% else %}text-kf-green{% endif %}">
+            {{ profile.memory_utilization_pct }}%
+        </p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <p class="text-sm text-gray-500">Waste Score</p>
+        <p class="text-2xl font-bold mt-1 {% if profile.waste_pct > 60 %}text-kf-danger{% elif profile.waste_pct > 30 %}text-kf-warn{% else %}text-kf-green{% endif %}">
+            {{ profile.waste_pct|int }}%
+        </p>
+    </div>
+    {% if cost %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <p class="text-sm text-gray-500">Monthly Savings</p>
+        <p class="text-2xl font-bold text-kf-green mt-1">${{ "%.2f"|format(cost.monthly_savings_usd) }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Time-series Charts -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">CPU Usage Over Time</h2>
+        <div style="height: 280px;">
+            <canvas id="cpu-timeseries"></canvas>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Memory Usage Over Time</h2>
+        <div style="height: 280px;">
+            <canvas id="memory-timeseries"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- CPU Stats Table -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-md font-semibold text-gray-900 mb-3">CPU Statistics</h3>
+        <table class="w-full text-sm">
+            <tbody class="divide-y divide-gray-100">
+                <tr><td class="py-1.5 text-gray-500">Request</td><td class="py-1.5 text-right font-medium">{{ profile.cpu_request_fmt }}</td></tr>
+                <tr><td class="py-1.5 text-gray-500">P95 Usage</td><td class="py-1.5 text-right font-medium">{{ profile.cpu_p95_fmt }}</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Mean</td><td class="py-1.5 text-right font-medium">{{ profile.cpu_stats.mean }} cores</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Max</td><td class="py-1.5 text-right font-medium">{{ profile.cpu_stats.max }} cores</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Std Dev</td><td class="py-1.5 text-right font-medium">{{ profile.cpu_stats.std_dev }}</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Samples</td><td class="py-1.5 text-right font-medium">{{ profile.cpu_stats.sample_count }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h3 class="text-md font-semibold text-gray-900 mb-3">Memory Statistics</h3>
+        <table class="w-full text-sm">
+            <tbody class="divide-y divide-gray-100">
+                <tr><td class="py-1.5 text-gray-500">Request</td><td class="py-1.5 text-right font-medium">{{ profile.memory_request_fmt }}</td></tr>
+                <tr><td class="py-1.5 text-gray-500">P95 Usage</td><td class="py-1.5 text-right font-medium">{{ profile.mem_p95_fmt }}</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Mean</td><td class="py-1.5 text-right font-medium">{{ profile.memory_stats.mean }} Mi</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Max</td><td class="py-1.5 text-right font-medium">{{ profile.memory_stats.max }} Mi</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Std Dev</td><td class="py-1.5 text-right font-medium">{{ profile.memory_stats.std_dev }} Mi</td></tr>
+                <tr><td class="py-1.5 text-gray-500">Samples</td><td class="py-1.5 text-right font-medium">{{ profile.memory_stats.sample_count }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Recommendation -->
+{% if recommendation %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Recommendation</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div>
+            <p class="text-xs text-gray-500 uppercase">Strategy</p>
+            <p class="font-medium">{{ recommendation.strategy }}</p>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 uppercase">Headroom</p>
+            <p class="font-medium">{{ (recommendation.headroom * 100)|int }}%</p>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 uppercase">Confidence</p>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                {% if recommendation.confidence == 'high' %}bg-green-100 text-green-800{% elif recommendation.confidence == 'medium' %}bg-amber-100 text-amber-800{% else %}bg-red-100 text-red-800{% endif %}">
+                {{ recommendation.confidence }}
+            </span>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 uppercase">CPU Reduction</p>
+            <p class="font-medium text-kf-green">-{{ recommendation.cpu_reduction_pct }}%</p>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+        <div>
+            <p class="text-gray-500">CPU: {{ recommendation.current_cpu_request_fmt }} &rarr; <span class="text-kf-green font-medium">{{ recommendation.recommended_cpu_request_fmt }}</span></p>
+        </div>
+        <div>
+            <p class="text-gray-500">Memory: {{ recommendation.current_memory_request_fmt }} &rarr; <span class="text-kf-green font-medium">{{ recommendation.recommended_memory_request_fmt }}</span></p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Patch YAML -->
+{% if patch_yaml %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Kubernetes Patch</h2>
+        <button onclick="copyToClipboard(this, 'patch-yaml-{{ profile.name }}')"
+            class="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+            </svg>
+            Copy
+        </button>
+    </div>
+    <pre id="patch-yaml-{{ profile.name }}" class="bg-gray-900 text-green-400 rounded-lg p-4 text-sm overflow-x-auto font-mono">{{ patch_yaml }}</pre>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    const tsData = {{ timeseries_json|safe }};
+    document.addEventListener('DOMContentLoaded', function() {
+        if (tsData && tsData.labels) {
+            renderTimeseriesChart('cpu-timeseries', tsData, 'cpu', 'CPU Usage (cores)');
+            renderTimeseriesChart('memory-timeseries', tsData, 'memory', 'Memory Usage (Mi)');
+        }
+    });
+</script>
+{% endblock %}
