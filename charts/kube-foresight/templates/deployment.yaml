@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kube-foresight.fullname" . }}
+  labels:
+    {{- include "kube-foresight.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "kube-foresight.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kube-foresight.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kube-foresight.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - dashboard
+            - --host=0.0.0.0
+            - --port={{ .Values.dashboard.port }}
+            {{- if .Values.dashboard.demo }}
+            - --demo
+            {{- end }}
+          env:
+            - name: KF_LOG_FORMAT
+              value: "json"
+            - name: KF_MODE
+              value: {{ .Values.collector.mode | quote }}
+            - name: KF_NAMESPACES
+              value: {{ .Values.collector.namespaces | quote }}
+            {{- if .Values.collector.prometheusUrl }}
+            - name: KF_PROMETHEUS_URL
+              value: {{ .Values.collector.prometheusUrl | quote }}
+            {{- end }}
+            {{- if .Values.persistence.enabled }}
+            - name: KF_DB_PATH
+              value: "/data/kube-foresight.db"
+            {{- end }}
+            - name: KF_CLOUD_PROVIDER
+              value: {{ .Values.collector.cloudProvider | quote }}
+            - name: KF_SCHEDULER_ENABLED
+              value: {{ .Values.scheduler.enabled | quote }}
+            - name: KF_COLLECT_INTERVAL
+              value: {{ .Values.scheduler.collectIntervalSeconds | quote }}
+            - name: KF_ANALYSIS_INTERVAL
+              value: {{ .Values.scheduler.analysisIntervalSeconds | quote }}
+            {{- if .Values.alerting.webhookUrl }}
+            - name: KF_WEBHOOK_URL
+              value: {{ .Values.alerting.webhookUrl | quote }}
+            {{- end }}
+            {{- if .Values.alerting.slackWebhookUrl }}
+            - name: KF_SLACK_WEBHOOK_URL
+              value: {{ .Values.alerting.slackWebhookUrl | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.dashboard.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "kube-foresight.fullname" . }}-data
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

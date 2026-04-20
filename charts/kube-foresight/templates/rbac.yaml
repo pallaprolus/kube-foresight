@@ -1,0 +1,43 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kube-foresight.fullname" . }}
+  labels:
+    {{- include "kube-foresight.labels" . | nindent 4 }}
+rules:
+  # Read namespaces, pods, and deployments
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list"]
+  - apiGroups: ["", "apps"]
+    resources: ["pods", "deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  # Read pod metrics
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  # Read HPAs for conflict detection
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["list"]
+  # Patch deployments (for applying recommendations)
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "kube-foresight.fullname" . }}
+  labels:
+    {{- include "kube-foresight.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "kube-foresight.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "kube-foresight.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

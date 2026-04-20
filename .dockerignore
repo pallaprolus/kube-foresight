@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+__pycache__
+*.pyc
+*.egg-info
+.pytest_cache
+.ruff_cache
+tests/
+examples/
+*.md
+!README.md
+Dockerfile
+.dockerignore

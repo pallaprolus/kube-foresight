@@ -1,0 +1,17 @@
+apiVersion: v2
+name: kube-foresight
+description: Predictive Resource Optimizer for Kubernetes
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - resource-optimization
+  - right-sizing
+  - finops
+  - cost-savings
+home: https://github.com/pallaprolus/kube-foresight
+sources:
+  - https://github.com/pallaprolus/kube-foresight
+maintainers:
+  - name: Sudhakar Pallaprolu

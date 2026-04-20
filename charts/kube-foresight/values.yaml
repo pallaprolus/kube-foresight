@@ -1,0 +1,80 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/pallaprolus/kube-foresight
+  tag: ""  # defaults to Chart appVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Dashboard configuration
+dashboard:
+  port: 8080
+  # Pre-load demo data on startup
+  demo: false
+
+# Collector configuration
+collector:
+  # "mock", "k8s", or "prometheus"
+  mode: "k8s"
+  prometheusUrl: ""
+  # Comma-separated namespaces to analyze (supports multi-namespace)
+  namespaces: "default"
+  # Cloud provider for cost estimation: aws, gcp, azure
+  cloudProvider: "aws"
+
+# Background scheduler (continuous collection + analysis)
+scheduler:
+  enabled: false
+  collectIntervalSeconds: 300   # 5 minutes
+  analysisIntervalSeconds: 900  # 15 minutes
+
+# Alerting for at-risk deployments
+alerting:
+  webhookUrl: ""
+  slackWebhookUrl: ""
+
+# SQLite persistence
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""
+  accessMode: ReadWriteOnce
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# RBAC for reading pod metrics
+rbac:
+  create: true
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: kube-foresight.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
