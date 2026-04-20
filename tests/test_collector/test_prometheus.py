@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from kube_foresight.collector.prometheus import PrometheusCollector, _extract_deployment_name
 
 

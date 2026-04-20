@@ -9,7 +9,7 @@ from pathlib import Path
 
 from kube_foresight.collector.base import BaseCollector
 from kube_foresight.collector.store import MetricsStore
-from kube_foresight.exceptions import K8sConnectionError, K8sMetricsError
+from kube_foresight.exceptions import K8sMetricsError
 from kube_foresight.models import ContainerMetrics
 
 logger = logging.getLogger(__name__)
@@ -207,7 +207,6 @@ class K8sMetricsCollector(BaseCollector):
         apps_api: object,
     ) -> dict[str, str]:
         """Map pod names to deployment names via the API chain."""
-        from kubernetes import client  # type: ignore[import-untyped]
 
         deploy_map: dict[str, str] = {}
         try:
@@ -242,7 +241,9 @@ class K8sMetricsCollector(BaseCollector):
             for pod in pods.items:
                 pod_name = pod.metadata.name
                 for container in pod.spec.containers:
-                    resources = container.resources or type("R", (), {"requests": None, "limits": None})()
+                    resources = container.resources or type(
+                        "R", (), {"requests": None, "limits": None},
+                    )()
                     requests = resources.requests or {}
                     limits = resources.limits or {}
 

@@ -117,7 +117,11 @@ class MetricsStore:
         self,
         rows: list[tuple[int, str, str, str, str, int, int]],
     ) -> None:
-        """Batch-insert snapshots. Each tuple: (ts_ms, ns, pod, container, deploy, cpu_nano, mem_bytes)."""
+        """Batch-insert snapshots.
+
+        Each tuple: (ts_ms, ns, pod, container, deploy,
+        cpu_nano, mem_bytes).
+        """
         conn = self._connect()
         try:
             conn.executemany(

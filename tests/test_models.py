@@ -3,8 +3,6 @@
 from kube_foresight.models import (
     ConfidenceLevel,
     CostEstimate,
-    DeploymentProfile,
-    Recommendation,
     ResourceSpec,
     UsageStats,
 )

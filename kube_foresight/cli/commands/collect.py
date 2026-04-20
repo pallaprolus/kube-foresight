@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import signal
-import sys
 import time
 from pathlib import Path
 
@@ -20,8 +19,14 @@ def collect(
     interval: int = typer.Option(300, help="Polling interval in seconds (0 = --once)."),
     once: bool = typer.Option(False, help="Take a single snapshot and exit."),
     retention: int = typer.Option(720, help="Data retention in hours (default 30 days)."),
-    downsample_after: int = typer.Option(168, help="Keep full resolution for this many hours (default 7 days)."),
-    db_path: str = typer.Option(None, help="SQLite database path (default: ~/.kube-foresight/metrics.db)."),
+    downsample_after: int = typer.Option(
+        168,
+        help="Keep full resolution for this many hours (default 7 days).",
+    ),
+    db_path: str = typer.Option(
+        None,
+        help="SQLite database path (default: ~/.kube-foresight/metrics.db).",
+    ),
     kubeconfig: str = typer.Option(None, help="Path to kubeconfig file."),
     context: str = typer.Option(None, help="Kubernetes context name."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging."),

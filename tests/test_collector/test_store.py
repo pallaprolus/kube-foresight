@@ -18,7 +18,10 @@ def _ts(minutes_ago: int) -> int:
 
 
 def test_insert_and_count(store):
-    store.insert_snapshot("default", "pod-a-xyz-123", "app", "pod-a", 100_000_000, 128 * 1024 * 1024)
+    store.insert_snapshot(
+        "default", "pod-a-xyz-123", "app", "pod-a",
+        100_000_000, 128 * 1024 * 1024,
+    )
     assert store.get_snapshot_count() == 1
     assert store.get_snapshot_count("default") == 1
     assert store.get_snapshot_count("other") == 0
@@ -27,7 +30,10 @@ def test_insert_and_count(store):
 def test_batch_insert(store):
     now_ms = int(time.time() * 1000)
     rows = [
-        (now_ms, "default", f"pod-{i}-xyz-123", "app", f"pod-{i}", 50_000_000 * i, 64 * 1024 * 1024 * i)
+        (
+            now_ms, "default", f"pod-{i}-xyz-123", "app",
+            f"pod-{i}", 50_000_000 * i, 64 * 1024 * 1024 * i,
+        )
         for i in range(1, 6)
     ]
     store.insert_snapshots_batch(rows)
@@ -35,9 +41,15 @@ def test_batch_insert(store):
 
 
 def test_upsert_resource_spec(store):
-    store.upsert_resource_spec("default", "pod-a-xyz-123", "app", 0.5, 1.0, 256 * 1024 * 1024, 512 * 1024 * 1024)
+    store.upsert_resource_spec(
+        "default", "pod-a-xyz-123", "app",
+        0.5, 1.0, 256 * 1024 * 1024, 512 * 1024 * 1024,
+    )
     # Upsert again with different values — should not fail
-    store.upsert_resource_spec("default", "pod-a-xyz-123", "app", 0.3, 0.6, 128 * 1024 * 1024, 256 * 1024 * 1024)
+    store.upsert_resource_spec(
+        "default", "pod-a-xyz-123", "app",
+        0.3, 0.6, 128 * 1024 * 1024, 256 * 1024 * 1024,
+    )
     # Check that specs are used in query
     assert store.get_snapshot_count() == 0  # no snapshots yet, just specs
 
@@ -58,7 +70,10 @@ def test_query_timeseries_returns_container_metrics(store):
         ts = (ts // step_ms) * step_ms
         rows.append((ts, "prod", "web-abc-123", "nginx", "web", 200_000_000, 256 * 1024 * 1024))
     store.insert_snapshots_batch(rows)
-    store.upsert_resource_spec("prod", "web-abc-123", "nginx", 0.5, 1.0, 512 * 1024 * 1024, 1024 * 1024 * 1024)
+    store.upsert_resource_spec(
+        "prod", "web-abc-123", "nginx",
+        0.5, 1.0, 512 * 1024 * 1024, 1024 * 1024 * 1024,
+    )
 
     metrics = store.query_timeseries("prod", lookback_hours=2, step_seconds=300)
     assert len(metrics) == 1
@@ -79,7 +94,10 @@ def test_query_timeseries_returns_container_metrics(store):
 
 def test_query_timeseries_default_specs(store):
     """When no resource spec exists, reasonable defaults are used."""
-    store.insert_snapshot("ns", "pod-abc-123", "app", "pod", 100_000_000, 64 * 1024 * 1024, timestamp_ms=_ts(5))
+    store.insert_snapshot(
+        "ns", "pod-abc-123", "app", "pod",
+        100_000_000, 64 * 1024 * 1024, timestamp_ms=_ts(5),
+    )
     metrics = store.query_timeseries("ns", lookback_hours=1, step_seconds=300)
     assert len(metrics) == 1
     m = metrics[0]
@@ -92,8 +110,14 @@ def test_query_timeseries_default_specs(store):
 def test_query_multiple_containers(store):
     """Multiple pods/containers should produce multiple ContainerMetrics."""
     ts = _ts(5)
-    store.insert_snapshot("ns", "api-abc-123", "api", "api", 100_000_000, 64 * 1024 * 1024, timestamp_ms=ts)
-    store.insert_snapshot("ns", "web-def-456", "web", "web", 200_000_000, 128 * 1024 * 1024, timestamp_ms=ts)
+    store.insert_snapshot(
+        "ns", "api-abc-123", "api", "api",
+        100_000_000, 64 * 1024 * 1024, timestamp_ms=ts,
+    )
+    store.insert_snapshot(
+        "ns", "web-def-456", "web", "web",
+        200_000_000, 128 * 1024 * 1024, timestamp_ms=ts,
+    )
     metrics = store.query_timeseries("ns", lookback_hours=1, step_seconds=300)
     assert len(metrics) == 2
     names = {m.deployment_name for m in metrics}
@@ -102,8 +126,14 @@ def test_query_multiple_containers(store):
 
 def test_purge_old_data(store):
     # Insert old data (2 hours ago) and recent data (5 min ago)
-    store.insert_snapshot("ns", "pod-a-123", "app", "pod-a", 100_000_000, 64 * 1024 * 1024, timestamp_ms=_ts(120))
-    store.insert_snapshot("ns", "pod-a-123", "app", "pod-a", 100_000_000, 64 * 1024 * 1024, timestamp_ms=_ts(5))
+    store.insert_snapshot(
+        "ns", "pod-a-123", "app", "pod-a",
+        100_000_000, 64 * 1024 * 1024, timestamp_ms=_ts(120),
+    )
+    store.insert_snapshot(
+        "ns", "pod-a-123", "app", "pod-a",
+        100_000_000, 64 * 1024 * 1024, timestamp_ms=_ts(5),
+    )
     assert store.get_snapshot_count() == 2
 
     deleted = store.purge_old_data(retention_hours=1)
@@ -140,6 +170,37 @@ def test_downsample_old_data(store):
     # Old data should have been compressed (fewer rows)
     assert after < before
     assert removed > 0
+
+
+def test_get_namespaces_empty(store):
+    result = store.get_namespaces()
+    assert result == []
+
+
+def test_get_namespaces(store):
+    ts = _ts(5)
+    mem = 64 * 1024 * 1024
+    store.insert_snapshot(
+        "ns-a", "pod-1-123", "app", "deploy-1",
+        100_000_000, mem, timestamp_ms=ts,
+    )
+    store.insert_snapshot(
+        "ns-a", "pod-2-123", "app", "deploy-2",
+        100_000_000, mem, timestamp_ms=ts,
+    )
+    store.insert_snapshot(
+        "ns-b", "pod-3-123", "app", "deploy-3",
+        100_000_000, mem, timestamp_ms=ts,
+    )
+
+    result = store.get_namespaces()
+    assert len(result) == 2
+    assert result[0]["namespace"] == "ns-a"
+    assert result[0]["snapshots"] == 2
+    assert result[0]["deployments"] == 2
+    assert result[1]["namespace"] == "ns-b"
+    assert result[1]["snapshots"] == 1
+    assert result[1]["deployments"] == 1
 
 
 def test_db_path_created(tmp_path):

@@ -16,7 +16,6 @@ from kube_foresight.collector.k8s import (
 )
 from kube_foresight.exceptions import K8sMetricsError
 
-
 # ── Unit parsing tests ──────────────────────────────────────────
 
 
@@ -155,7 +154,11 @@ def mock_k8s():
     saved = {}
     for mod_name in ("kubernetes", "kubernetes.client", "kubernetes.config"):
         saved[mod_name] = sys.modules.get(mod_name)
-        sys.modules[mod_name] = mock_kubernetes if mod_name == "kubernetes" else getattr(mock_kubernetes, mod_name.split(".")[-1])
+        if mod_name == "kubernetes":
+            sys.modules[mod_name] = mock_kubernetes
+        else:
+            attr = mod_name.split(".")[-1]
+            sys.modules[mod_name] = getattr(mock_kubernetes, attr)
 
     yield mock_client, mock_config
 
@@ -300,7 +303,10 @@ class TestK8sMetricsCollectorCollect:
         rows = []
         for i in range(5):
             ts = now_ms - (i * 300_000)
-            rows.append((ts, "default", "web-abc-123", "nginx", "web", 200_000_000, 128 * 1024 * 1024))
+            rows.append((
+                ts, "default", "web-abc-123", "nginx",
+                "web", 200_000_000, 128 * 1024 * 1024,
+            ))
         collector.store.insert_snapshots_batch(rows)
         collector.store.upsert_resource_spec(
             "default", "web-abc-123", "nginx", 0.5, 1.0, 256 * 1024 * 1024, 512 * 1024 * 1024,

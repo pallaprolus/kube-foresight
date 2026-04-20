@@ -8,8 +8,14 @@ from kube_foresight.models import (
     ResourceSpec,
     UsageStats,
 )
-from kube_foresight.pricing.estimator import HOURS_PER_MONTH, estimate_cost, estimate_namespace_costs
+from kube_foresight.pricing.estimator import (
+    HOURS_PER_MONTH,
+    estimate_cost,
+    estimate_namespace_costs,
+)
 from kube_foresight.pricing.providers.aws import AWSPricingProvider
+from kube_foresight.pricing.providers.azure import AzurePricingProvider
+from kube_foresight.pricing.providers.gcp import GCPPricingProvider
 from kube_foresight.recommender.engine import generate_recommendations
 
 
@@ -86,3 +92,60 @@ def test_estimate_namespace_costs_full_pipeline(mock_metrics):
     assert len(estimates) == 5
     total = sum(e.monthly_savings_usd for e in estimates)
     assert total > 0
+
+
+# --- Multi-cloud provider tests ---
+
+
+def test_estimate_with_gcp_provider():
+    """GCP costs should differ from AWS."""
+    profile = _make_profile()
+    rec = _make_recommendation()
+    aws_est = estimate_cost(profile, rec, provider=AWSPricingProvider())
+    gcp_est = estimate_cost(profile, rec, provider=GCPPricingProvider())
+
+    assert gcp_est.current_monthly_cost_usd < aws_est.current_monthly_cost_usd
+    assert gcp_est.monthly_savings_usd != aws_est.monthly_savings_usd
+    assert gcp_est.deployment_name == aws_est.deployment_name
+
+
+def test_estimate_with_azure_provider():
+    """Azure costs should be higher than AWS."""
+    profile = _make_profile()
+    rec = _make_recommendation()
+    aws_est = estimate_cost(profile, rec, provider=AWSPricingProvider())
+    azure_est = estimate_cost(profile, rec, provider=AzurePricingProvider())
+
+    assert azure_est.current_monthly_cost_usd > aws_est.current_monthly_cost_usd
+    assert azure_est.monthly_savings_usd != aws_est.monthly_savings_usd
+
+
+def test_estimate_namespace_costs_with_provider(mock_metrics):
+    """Passing an explicit provider to estimate_namespace_costs works."""
+    profiles = profile_deployments(mock_metrics)
+    ranked = rank_by_over_provisioning(profiles, top_n=5)
+    recs = generate_recommendations(ranked)
+
+    gcp_estimates = estimate_namespace_costs(ranked, recs, provider=GCPPricingProvider())
+    aws_estimates = estimate_namespace_costs(ranked, recs, provider=AWSPricingProvider())
+
+    gcp_total = sum(e.monthly_savings_usd for e in gcp_estimates)
+    aws_total = sum(e.monthly_savings_usd for e in aws_estimates)
+
+    assert gcp_total != aws_total
+    assert len(gcp_estimates) == len(aws_estimates)
+
+
+def test_provider_from_env_var(monkeypatch):
+    """KF_CLOUD_PROVIDER env var controls default provider."""
+    profile = _make_profile()
+    rec = _make_recommendation()
+
+    monkeypatch.setenv("KF_CLOUD_PROVIDER", "gcp")
+    gcp_est = estimate_cost(profile, rec)  # no explicit provider
+
+    monkeypatch.setenv("KF_CLOUD_PROVIDER", "azure")
+    azure_est = estimate_cost(profile, rec)
+
+    # GCP cheaper per vCPU, so current cost should differ
+    assert gcp_est.current_monthly_cost_usd != azure_est.current_monthly_cost_usd

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
@@ -15,7 +13,7 @@ def demo(
     strategy: str = typer.Option("p95", "--strategy", "-s", help="Strategy: p95, p99, max"),
     headroom: float = typer.Option(0.20, "--headroom", help="Safety margin (0.0-1.0)"),
     seed: int = typer.Option(42, "--seed", help="Random seed for reproducibility"),
-    output_dir: Optional[str] = typer.Option(
+    output_dir: str | None = typer.Option(
         None, "--output-dir", "-o", help="Write YAML patches to this directory"
     ),
     cloud_provider: str = typer.Option(
