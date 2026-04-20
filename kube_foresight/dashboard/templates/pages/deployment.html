@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="mb-6">
-    <a href="/overview" class="text-sm text-kf-accent hover:text-blue-700">&larr; Back to Overview</a>
+    <a href="/" class="text-sm text-kf-accent hover:text-blue-700">&larr; Back to Overview</a>
     <h1 class="text-2xl font-bold text-gray-900 mt-2">{{ profile.name }}</h1>
     <p class="text-sm text-gray-500">{{ profile.namespace }} &middot; {{ profile.replica_count }} replicas</p>
 </div>
@@ -82,6 +82,68 @@
     </div>
 </div>
 
+<!-- Resource Forecast -->
+{% if forecast %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Resource Forecast</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        <div>
+            <p class="text-xs text-gray-500 uppercase">Risk Level</p>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase
+                {% if forecast.risk_level == 'critical' %}bg-red-100 text-red-800{% elif forecast.risk_level == 'warning' %}bg-amber-100 text-amber-800{% else %}bg-green-100 text-green-800{% endif %}">
+                {{ forecast.risk_level }}
+            </span>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 uppercase">CPU Trend</p>
+            <p class="font-medium">{{ forecast.cpu_forecast.trend }}
+                <span class="text-xs text-gray-400">(R&sup2;={{ "%.2f"|format(forecast.cpu_forecast.r_squared) }})</span>
+            </p>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 uppercase">Memory Trend</p>
+            <p class="font-medium">{{ forecast.memory_forecast.trend }}
+                <span class="text-xs text-gray-400">(R&sup2;={{ "%.2f"|format(forecast.memory_forecast.r_squared) }})</span>
+            </p>
+        </div>
+        <div>
+            <p class="text-xs text-gray-500 uppercase">Days to Breach</p>
+            <p class="font-medium">
+                {% if forecast.cpu_forecast.days_until_request_breach %}
+                    CPU: {{ forecast.cpu_forecast.days_until_request_breach|round(0)|int }}d
+                {% else %}
+                    CPU: --
+                {% endif %}
+                /
+                {% if forecast.memory_forecast.days_until_request_breach %}
+                    Mem: {{ forecast.memory_forecast.days_until_request_breach|round(0)|int }}d
+                {% else %}
+                    Mem: --
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    <p class="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">{{ forecast.summary }}</p>
+</div>
+{% endif %}
+
+<!-- HPA Conflicts -->
+{% if hpa_conflicts %}
+<div class="bg-amber-50 border border-amber-300 rounded-xl p-6 mb-8">
+    <div class="flex items-start">
+        <svg class="w-5 h-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+        </svg>
+        <div>
+            <h3 class="text-sm font-semibold text-amber-800">HPA Conflict Detected</h3>
+            {% for conflict in hpa_conflicts %}
+            <p class="text-sm text-amber-700 mt-1">{{ conflict.message }}</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Recommendation -->
 {% if recommendation %}
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
@@ -123,15 +185,34 @@
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold text-gray-900">Kubernetes Patch</h2>
-        <button onclick="copyToClipboard(this, 'patch-yaml-{{ profile.name }}')"
-            class="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors">
-            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
-            </svg>
-            Copy
-        </button>
+        <div class="flex items-center space-x-2">
+            <button onclick="copyToClipboard(this, 'patch-yaml-{{ profile.name }}')"
+                class="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                </svg>
+                Copy
+            </button>
+            <button hx-post="/partials/patches/{{ profile.name }}/dry-run"
+                hx-target="#detail-apply-status"
+                hx-swap="innerHTML"
+                class="inline-flex items-center px-3 py-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-sm font-medium text-amber-700 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Dry Run
+            </button>
+            <button onclick="confirmApplyDetail('{{ profile.name }}')"
+                class="inline-flex items-center px-3 py-1.5 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg text-sm font-medium text-green-700 transition-colors">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Apply
+            </button>
+        </div>
     </div>
     <pre id="patch-yaml-{{ profile.name }}" class="bg-gray-900 text-green-400 rounded-lg p-4 text-sm overflow-x-auto font-mono">{{ patch_yaml }}</pre>
+    <div id="detail-apply-status" class="mt-2 min-h-[1.25rem]"></div>
 </div>
 {% endif %}
 {% endblock %}
@@ -139,11 +220,26 @@
 {% block scripts_extra %}
 <script>
     const tsData = {{ timeseries_json|safe }};
+    const forecastData = {{ forecast_json|safe }};
     document.addEventListener('DOMContentLoaded', function() {
         if (tsData && tsData.labels) {
-            renderTimeseriesChart('cpu-timeseries', tsData, 'cpu', 'CPU Usage (cores)');
-            renderTimeseriesChart('memory-timeseries', tsData, 'memory', 'Memory Usage (Mi)');
+            const cpuFc = forecastData ? forecastData.cpu_forecast : null;
+            const memFc = forecastData ? forecastData.memory_forecast : null;
+            renderTimeseriesChart('cpu-timeseries', tsData, 'cpu', 'CPU Usage (cores)', cpuFc);
+            renderTimeseriesChart('memory-timeseries', tsData, 'memory', 'Memory Usage (Mi)', memFc);
         }
     });
+
+    function confirmApplyDetail(name) {
+        if (!confirm('Apply patch to deployment "' + name + '"?\n\nThis will modify resource requests/limits on your live cluster.')) {
+            return;
+        }
+        const target = document.getElementById('detail-apply-status');
+        target.innerHTML = '<span class="text-gray-500 text-sm">Applying...</span>';
+        fetch('/partials/patches/' + encodeURIComponent(name) + '/apply', { method: 'POST' })
+            .then(r => r.text())
+            .then(html => { target.innerHTML = html; })
+            .catch(err => { target.innerHTML = '<span class="text-red-500 text-sm">Network error</span>'; });
+    }
 </script>
 {% endblock %}

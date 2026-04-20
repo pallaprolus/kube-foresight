@@ -4,25 +4,78 @@
 {% block content %}
 <div class="mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Cost Savings</h1>
-    <p class="text-sm text-gray-500 mt-1">Estimated savings based on AWS EKS on-demand pricing (us-east-1, m5 instance family)</p>
+    <p class="text-sm text-gray-500 mt-1">Estimated savings based on {{ provider_name }} pricing</p>
 </div>
 
 <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
     <p class="text-xs text-amber-700">
-        <strong>Note:</strong> Cost estimates use AWS EKS on-demand pricing for the m5 instance family in us-east-1.
-        Actual costs may vary by cloud provider, region, instance type, and discount programs (Reserved Instances, Savings Plans, Spot).
+        <strong>Note:</strong> Cost estimates use {{ provider_name }} pricing.
+        Actual costs may vary by region, instance type, and discount programs (Reserved Instances, Savings Plans, Spot).
     </p>
+</div>
+
+<!-- Cloud Cost Comparison (moved from Executive Summary) -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Cloud Cost Comparison</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Provider cards -->
+        <div class="space-y-4">
+            {% for key, prov in cloud_summary.providers.items() %}
+            <div class="border rounded-lg p-4 {% if key == cloud_summary.cheapest %}border-kf-green bg-green-50{% else %}border-gray-200{% endif %}">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-semibold text-gray-900">{{ prov.name }}</span>
+                    {% if key == cloud_summary.cheapest %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Cheapest</span>
+                    {% endif %}
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                        <p class="text-gray-500">Current</p>
+                        <p class="font-medium text-gray-900">${{ "%.2f"|format(prov.total_current) }}/mo</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Optimized</p>
+                        <p class="font-medium {% if prov.total_recommended <= prov.total_current %}text-kf-green{% else %}text-red-600{% endif %}">${{ "%.2f"|format(prov.total_recommended) }}/mo</p>
+                    </div>
+                    <div>
+                        {% if prov.total_savings >= 0 %}
+                        <p class="text-gray-500">Savings</p>
+                        <p class="font-medium text-kf-green">${{ "%.2f"|format(prov.total_savings) }}/mo</p>
+                        {% else %}
+                        <p class="text-gray-500">Increase</p>
+                        <p class="font-medium text-red-600">+${{ "%.2f"|format(prov.total_savings|abs) }}/mo</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <!-- Chart -->
+        <div style="height: 280px;">
+            <canvas id="cloud-comparison-chart"></canvas>
+        </div>
+    </div>
 </div>
 
 <!-- Summary Cards -->
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+        {% if report.total_monthly_savings_usd >= 0 %}
         <p class="text-sm text-gray-500">Monthly Savings</p>
         <p class="text-3xl font-bold text-kf-green mt-2">${{ "%.2f"|format(report.total_monthly_savings_usd) }}</p>
+        {% else %}
+        <p class="text-sm text-gray-500">Monthly Cost Increase</p>
+        <p class="text-3xl font-bold text-red-600 mt-2">+${{ "%.2f"|format(report.total_monthly_savings_usd|abs) }}</p>
+        {% endif %}
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+        {% if report.total_annual_savings_usd >= 0 %}
         <p class="text-sm text-gray-500">Annual Savings</p>
         <p class="text-3xl font-bold text-kf-green mt-2">${{ "%.0f"|format(report.total_annual_savings_usd) }}</p>
+        {% else %}
+        <p class="text-sm text-gray-500">Annual Cost Increase</p>
+        <p class="text-3xl font-bold text-red-600 mt-2">+${{ "%.0f"|format(report.total_annual_savings_usd|abs) }}</p>
+        {% endif %}
     </div>
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
         <p class="text-sm text-gray-500">Deployments Optimized</p>
@@ -30,12 +83,12 @@
     </div>
 </div>
 
-<!-- Charts Row -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-    <!-- Donut Chart -->
+<!-- Charts Row: Donut + Savings Bar + Sizing -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Cost Breakdown Donut -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown by Deployment</h2>
-        <div style="height: 320px;">
+        <div style="height: 280px;">
             <canvas id="cost-donut"></canvas>
         </div>
     </div>
@@ -43,13 +96,55 @@
     <!-- Savings Bar Chart -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Monthly Savings per Deployment</h2>
-        <div style="height: 320px;">
+        <div style="height: 280px;">
             <canvas id="savings-bar"></canvas>
+        </div>
+    </div>
+
+    <!-- Sizing Distribution (moved from Executive Summary) -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Sizing Distribution</h2>
+        <div style="height: 280px;">
+            <canvas id="sizing-donut-chart"></canvas>
         </div>
     </div>
 </div>
 
-<!-- Cost Table -->
+<!-- Top 5 Savings Opportunities -->
+{% if top_savings %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Top Cost Changes</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-gray-500 border-b">
+                    <th class="pb-2 font-medium">Deployment</th>
+                    <th class="pb-2 font-medium text-right">Monthly Savings</th>
+                    <th class="pb-2 font-medium text-right">Annual</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in top_savings %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-2">
+                        <a href="/deployments/{{ c.deployment_name }}" class="text-kf-accent hover:text-blue-700 font-medium">{{ c.deployment_name }}</a>
+                    </td>
+                    {% if c.monthly_savings_usd >= 0 %}
+                    <td class="py-2 text-right text-kf-green font-medium">${{ "%.2f"|format(c.monthly_savings_usd) }}</td>
+                    <td class="py-2 text-right text-kf-green">${{ "%.2f"|format(c.annual_savings_usd) }}</td>
+                    {% else %}
+                    <td class="py-2 text-right text-red-600 font-medium">+${{ "%.2f"|format(c.monthly_savings_usd|abs) }}</td>
+                    <td class="py-2 text-right text-red-600">+${{ "%.2f"|format(c.annual_savings_usd|abs) }}</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Detailed Cost Table -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-200">
         <h2 class="text-lg font-semibold text-gray-900">Detailed Cost Analysis</h2>
@@ -75,16 +170,26 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ c.replica_count }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">${{ "%.2f"|format(c.current_monthly_cost_usd) }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">${{ "%.2f"|format(c.recommended_monthly_cost_usd) }}</td>
+                    {% if c.monthly_savings_usd >= 0 %}
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-kf-green font-medium text-right">${{ "%.2f"|format(c.monthly_savings_usd) }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-kf-green font-medium text-right">${{ "%.2f"|format(c.annual_savings_usd) }}</td>
+                    {% else %}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium text-right">+${{ "%.2f"|format(c.monthly_savings_usd|abs) }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium text-right">+${{ "%.2f"|format(c.annual_savings_usd|abs) }}</td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
             <tfoot class="bg-gray-50">
                 <tr class="font-semibold">
                     <td class="px-6 py-3 text-sm text-gray-900" colspan="4">Total</td>
+                    {% if report.total_monthly_savings_usd >= 0 %}
                     <td class="px-6 py-3 text-sm text-kf-green text-right">${{ "%.2f"|format(report.total_monthly_savings_usd) }}</td>
                     <td class="px-6 py-3 text-sm text-kf-green text-right">${{ "%.2f"|format(report.total_annual_savings_usd) }}</td>
+                    {% else %}
+                    <td class="px-6 py-3 text-sm text-red-600 text-right">+${{ "%.2f"|format(report.total_monthly_savings_usd|abs) }}</td>
+                    <td class="px-6 py-3 text-sm text-red-600 text-right">+${{ "%.2f"|format(report.total_annual_savings_usd|abs) }}</td>
+                    {% endif %}
                 </tr>
             </tfoot>
         </table>
@@ -95,9 +200,16 @@
 {% block scripts_extra %}
 <script>
     const reportData = {{ report_json|safe }};
+    const cloudData = {{ cloud_summary_json|safe }};
     document.addEventListener('DOMContentLoaded', function() {
         renderCostDonut('cost-donut', reportData.costs);
         renderSavingsBar('savings-bar', reportData.costs);
+        renderSizingDonut('sizing-donut-chart', {
+            over: reportData.over_provisioned_count,
+            right: reportData.right_sized_count,
+            under: reportData.under_provisioned_count,
+        });
+        renderCloudComparisonBar('cloud-comparison-chart', cloudData);
     });
 </script>
 {% endblock %}

@@ -5,7 +5,7 @@
             <div>
                 <p class="text-sm text-gray-500 font-medium">Analyzed</p>
                 <p class="text-2xl font-bold text-gray-900 mt-1">{{ report.analyzed_deployments }}</p>
-                <p class="text-xs text-gray-400 mt-1">of {{ report.total_deployments }} total</p>
+                <p class="text-xs text-gray-400 mt-1">deployments total</p>
             </div>
             <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
                 <svg class="w-6 h-6 text-kf-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,36 +15,48 @@
         </div>
     </div>
 
-    <!-- Monthly Savings -->
+    <!-- Sizing Breakdown -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500 font-medium">Monthly Savings</p>
-                <p class="text-2xl font-bold text-kf-green mt-1">${{ "%.2f"|format(report.total_monthly_savings_usd) }}</p>
-                <p class="text-xs text-gray-400 mt-1">${{ "%.0f"|format(report.total_annual_savings_usd) }}/yr projected</p>
+                <p class="text-sm text-gray-500 font-medium">Health Breakdown</p>
+                <div class="flex items-center gap-3 mt-2">
+                    {% if report.under_provisioned_count > 0 %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">{{ report.under_provisioned_count }} under</span>
+                    {% endif %}
+                    {% if report.right_sized_count > 0 %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">{{ report.right_sized_count }} ok</span>
+                    {% endif %}
+                    {% if report.over_provisioned_count > 0 %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">{{ report.over_provisioned_count }} over</span>
+                    {% endif %}
+                </div>
             </div>
-            <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-kf-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+            <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-kf-warn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                 </svg>
             </div>
         </div>
     </div>
 
-    <!-- Avg Waste -->
+    <!-- Monthly Savings -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500 font-medium">Avg Waste</p>
-                <p class="text-2xl font-bold mt-1
-                    {% if report.avg_waste_pct > 60 %}text-kf-danger{% elif report.avg_waste_pct > 30 %}text-kf-warn{% else %}text-kf-green{% endif %}">
-                    {{ report.avg_waste_pct|int }}%
-                </p>
-                <p class="text-xs text-gray-400 mt-1">over-provisioning score</p>
+                {% if report.total_monthly_savings_usd >= 0 %}
+                <p class="text-sm text-gray-500 font-medium">Monthly Savings</p>
+                <p class="text-2xl font-bold text-kf-green mt-1">${{ "%.2f"|format(report.total_monthly_savings_usd) }}</p>
+                <p class="text-xs text-gray-400 mt-1">${{ "%.0f"|format(report.total_annual_savings_usd) }}/yr projected</p>
+                {% else %}
+                <p class="text-sm text-gray-500 font-medium">Additional Cost Needed</p>
+                <p class="text-2xl font-bold text-red-600 mt-1">+${{ "%.2f"|format(report.total_monthly_savings_usd|abs) }}</p>
+                <p class="text-xs text-gray-400 mt-1">+${{ "%.0f"|format(report.total_annual_savings_usd|abs) }}/yr to right-size</p>
+                {% endif %}
             </div>
-            <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-kf-warn" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-kf-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
                 </svg>
             </div>
         </div>
@@ -57,7 +69,11 @@
                 <p class="text-sm text-gray-500 font-medium">Top Saver</p>
                 {% if report.top_saver %}
                 <p class="text-lg font-bold text-gray-900 mt-1 truncate max-w-[140px]">{{ report.top_saver.deployment_name }}</p>
+                {% if report.top_saver.monthly_savings_usd >= 0 %}
                 <p class="text-xs text-kf-green mt-1">${{ "%.2f"|format(report.top_saver.monthly_savings_usd) }}/mo</p>
+                {% else %}
+                <p class="text-xs text-red-600 mt-1">+${{ "%.2f"|format(report.top_saver.monthly_savings_usd|abs) }}/mo needed</p>
+                {% endif %}
                 {% else %}
                 <p class="text-lg text-gray-400 mt-1">N/A</p>
                 {% endif %}

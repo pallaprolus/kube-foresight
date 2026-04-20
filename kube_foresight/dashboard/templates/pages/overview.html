@@ -2,18 +2,89 @@
 {% block title %}kube-foresight &middot; Overview{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Cluster Overview</h1>
-    <p class="text-sm text-gray-500 mt-1">Namespace: <span class="font-medium text-gray-700">{{ report.namespace }}</span></p>
+<!-- Header with Settings + Analyze -->
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Cluster Overview</h1>
+        {% if report %}
+        <p class="text-sm text-gray-500 mt-1">Namespace: <span class="font-medium text-gray-700">{{ report.namespace }}</span></p>
+        {% endif %}
+    </div>
+    <div class="flex items-center space-x-2">
+        <button type="button" onclick="toggleSettings()"
+            class="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors border border-gray-300">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Settings
+        </button>
+        <button hx-post="/partials/analyze"
+                hx-target="#analyze-result"
+                hx-include="#settings-panel input, #settings-panel select"
+                hx-indicator="#analyze-spinner"
+                class="inline-flex items-center px-4 py-2 bg-kf-accent text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Analyze
+        </button>
+    </div>
 </div>
 
+<!-- Collapsible Settings Panel -->
+<div id="settings-panel" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+    <h3 class="text-sm font-semibold text-gray-700 mb-4">Analysis Settings</h3>
+    <input type="hidden" name="mode" value="{{ default_mode }}">
+    <input type="hidden" name="seed" value="42">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+            <label for="namespace" class="block text-xs text-gray-500 mb-1">Namespace</label>
+            {% if namespaces %}
+            <select name="namespace" id="namespace"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-kf-accent focus:border-transparent outline-none">
+                {% for ns in namespaces %}
+                <option value="{{ ns }}" {% if ns == default_namespace %}selected{% endif %}>{{ ns }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <input type="text" name="namespace" id="namespace" value="{{ default_namespace }}"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-kf-accent focus:border-transparent outline-none"
+                placeholder="e.g. default">
+            {% endif %}
+        </div>
+        <div>
+            <label for="strategy" class="block text-xs text-gray-500 mb-1">Strategy</label>
+            <select name="strategy" id="strategy"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-kf-accent focus:border-transparent outline-none">
+                <option value="p95" selected>P95 (Recommended)</option>
+                <option value="p99">P99 (Conservative)</option>
+                <option value="max">Max (Safest)</option>
+            </select>
+        </div>
+        <div>
+            <label for="top_n" class="block text-xs text-gray-500 mb-1">Top N</label>
+            <input type="number" name="top_n" id="top_n" value="10" min="1" max="50"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-kf-accent focus:border-transparent outline-none">
+        </div>
+    </div>
+</div>
+
+<!-- HTMX feedback -->
+<div id="analyze-spinner" class="htmx-indicator mb-4">
+    {% include "partials/loading.html" %}
+</div>
+<div id="analyze-result" class="mb-4"></div>
+
+{% if report %}
 {% if report.analyzed_deployments == 0 %}
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
     <p class="text-gray-500 text-lg">No deployments found in namespace <span class="font-medium">{{ report.namespace }}</span>.</p>
-    <p class="text-gray-400 text-sm mt-2">Run an analysis from the <a href="/" class="text-kf-accent hover:underline">home page</a> to get started.</p>
+    <p class="text-gray-400 text-sm mt-2">Try a different namespace using the Settings panel above.</p>
 </div>
 {% else %}
 {% include "partials/kpi_cards.html" %}
+{% include "partials/forecast_alerts.html" %}
 
 <!-- Utilization Chart -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
@@ -25,10 +96,16 @@
 
 {% include "partials/deployment_table.html" %}
 {% endif %}
+{% else %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+    <p class="text-gray-500 text-lg">No analysis results available.</p>
+    <p class="text-gray-400 text-sm mt-2">Click <strong>Analyze</strong> to run resource analysis.</p>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts_extra %}
-{% if report.analyzed_deployments > 0 %}
+{% if report and report.analyzed_deployments > 0 %}
 <script>
     const reportData = {{ report_json|safe }};
     document.addEventListener('DOMContentLoaded', function() {

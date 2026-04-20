@@ -280,6 +280,28 @@ class MetricsStore:
         finally:
             conn.close()
 
+    def get_namespaces(self) -> list[dict]:
+        """Return distinct namespaces with snapshot counts."""
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                """SELECT namespace, COUNT(*) AS snapshot_count,
+                          COUNT(DISTINCT deployment_name) AS deployment_count
+                   FROM snapshots
+                   GROUP BY namespace
+                   ORDER BY namespace"""
+            ).fetchall()
+            return [
+                {
+                    "namespace": r["namespace"],
+                    "snapshots": r["snapshot_count"],
+                    "deployments": r["deployment_count"],
+                }
+                for r in rows
+            ]
+        finally:
+            conn.close()
+
     # ── Maintenance ───────────────────────────────────────────────
 
     def downsample_old_data(self, full_res_hours: int = 168) -> int:

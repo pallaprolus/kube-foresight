@@ -28,3 +28,11 @@ class BaseCollector(ABC):
             (is_connected, status_message)
         """
         ...
+
+    def list_namespaces(self) -> list[str]:
+        """Return available namespace names from the data source.
+
+        Override in subclasses that support namespace discovery.
+        Returns an empty list by default.
+        """
+        return []

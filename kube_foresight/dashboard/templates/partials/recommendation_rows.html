@@ -4,20 +4,32 @@
         <a href="/deployments/{{ r.deployment_name }}" class="text-sm font-medium text-kf-accent hover:text-blue-700">{{ r.deployment_name }}</a>
     </td>
     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-        {{ r.current_cpu_request_fmt }} &rarr; <span class="text-kf-green font-medium">{{ r.recommended_cpu_request_fmt }}</span>
+        {{ r.current_cpu_request_fmt }} &rarr; <span class="{% if r.cpu_reduction_pct < 0 %}text-red-600{% else %}text-kf-green{% endif %} font-medium">{{ r.recommended_cpu_request_fmt }}</span>
     </td>
     <td class="px-6 py-4 whitespace-nowrap">
+        {% if r.cpu_reduction_pct > 0 %}
         <span class="text-sm font-medium {% if r.cpu_reduction_pct > 40 %}text-kf-green{% elif r.cpu_reduction_pct > 20 %}text-kf-warn{% else %}text-gray-700{% endif %}">
             -{{ r.cpu_reduction_pct }}%
         </span>
+        {% elif r.cpu_reduction_pct < 0 %}
+        <span class="text-sm font-medium text-red-600">+{{ (-r.cpu_reduction_pct)|round|int }}%</span>
+        {% else %}
+        <span class="text-sm text-gray-400">0%</span>
+        {% endif %}
     </td>
     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-        {{ r.current_memory_request_fmt }} &rarr; <span class="text-kf-green font-medium">{{ r.recommended_memory_request_fmt }}</span>
+        {{ r.current_memory_request_fmt }} &rarr; <span class="{% if r.memory_reduction_pct < 0 %}text-red-600{% else %}text-kf-green{% endif %} font-medium">{{ r.recommended_memory_request_fmt }}</span>
     </td>
     <td class="px-6 py-4 whitespace-nowrap">
+        {% if r.memory_reduction_pct > 0 %}
         <span class="text-sm font-medium {% if r.memory_reduction_pct > 40 %}text-kf-green{% elif r.memory_reduction_pct > 20 %}text-kf-warn{% else %}text-gray-700{% endif %}">
             -{{ r.memory_reduction_pct }}%
         </span>
+        {% elif r.memory_reduction_pct < 0 %}
+        <span class="text-sm font-medium text-red-600">+{{ (-r.memory_reduction_pct)|round|int }}%</span>
+        {% else %}
+        <span class="text-sm text-gray-400">0%</span>
+        {% endif %}
     </td>
     <td class="px-6 py-4 whitespace-nowrap text-sm">{{ r.strategy }}</td>
     <td class="px-6 py-4 whitespace-nowrap">
@@ -26,5 +38,46 @@
             {{ r.confidence }}
         </span>
     </td>
+    <td class="px-6 py-4 whitespace-nowrap text-center">
+        {% if patch_map and r.deployment_name in patch_map %}
+        <button type="button" onclick="togglePatch('patch-row-{{ loop.index }}')"
+            class="inline-flex items-center px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium text-gray-600 transition-colors">
+            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+            </svg>
+            YAML
+        </button>
+        {% endif %}
+    </td>
 </tr>
+{% if patch_map and r.deployment_name in patch_map %}
+<tr id="patch-row-{{ loop.index }}" class="hidden">
+    <td colspan="8" class="px-6 py-4 bg-gray-50">
+        <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-gray-500">{{ r.deployment_name }}-patch.yaml</span>
+            <div class="flex items-center space-x-2">
+                <button onclick="copyToClipboard(this, 'patch-yaml-{{ loop.index }}')"
+                    class="inline-flex items-center px-2.5 py-1 bg-white hover:bg-gray-100 rounded text-xs font-medium text-gray-600 transition-colors border border-gray-200">
+                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                    </svg>
+                    Copy
+                </button>
+                <button hx-post="/partials/patches/{{ r.deployment_name }}/dry-run"
+                    hx-target="#patch-status-{{ loop.index }}"
+                    hx-swap="innerHTML"
+                    class="inline-flex items-center px-2.5 py-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded text-xs font-medium text-amber-700 transition-colors">
+                    Dry Run
+                </button>
+                <button onclick="confirmApply('{{ r.deployment_name }}', {{ loop.index }})"
+                    class="inline-flex items-center px-2.5 py-1 bg-green-50 hover:bg-green-100 border border-green-200 rounded text-xs font-medium text-green-700 transition-colors">
+                    Apply
+                </button>
+            </div>
+        </div>
+        <pre id="patch-yaml-{{ loop.index }}" class="bg-gray-900 text-green-400 rounded-lg p-3 text-xs overflow-x-auto font-mono">{{ patch_map[r.deployment_name] }}</pre>
+        <div id="patch-status-{{ loop.index }}" class="mt-2 min-h-[1rem]"></div>
+    </td>
+</tr>
+{% endif %}
 {% endfor %}

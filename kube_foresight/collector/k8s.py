@@ -125,6 +125,26 @@ class K8sMetricsCollector(BaseCollector):
         except Exception as e:
             return False, f"Kubernetes connection failed: {e}"
 
+    def list_namespaces(self) -> list[str]:
+        """List namespaces from the live cluster, falling back to stored data."""
+        # Try live cluster first
+        try:
+            self._ensure_k8s_client()
+            from kubernetes import client  # type: ignore[import-untyped]
+
+            v1 = client.CoreV1Api()
+            ns_list = v1.list_namespace()
+            return sorted(ns.metadata.name for ns in ns_list.items)
+        except Exception as e:
+            logger.debug("Could not list live namespaces, falling back to store: %s", e)
+
+        # Fall back to namespaces with stored data
+        try:
+            stored = self._store.get_namespaces()
+            return [ns["namespace"] for ns in stored]
+        except Exception:
+            return []
+
     def take_snapshot(self, namespace: str) -> int:
         """Fetch current pod metrics and resource specs, write to SQLite.
 

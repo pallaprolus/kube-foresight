@@ -44,6 +44,23 @@ class PrometheusCollector(BaseCollector):
         except Exception as e:
             return False, f"Error: {e}"
 
+    def list_namespaces(self) -> list[str]:
+        """Discover namespaces that have container CPU metrics in Prometheus."""
+        try:
+            query = (
+                "count by (namespace) ("
+                'container_cpu_usage_seconds_total{container!="POD",'
+                'container!=""})'
+            )
+            results = self._query_instant(query)
+            return sorted(
+                r["metric"].get("namespace", "")
+                for r in results
+                if r["metric"].get("namespace")
+            )
+        except Exception:
+            return []
+
     def collect(
         self,
         namespace: str,

@@ -61,3 +61,10 @@ def test_reproducibility():
     m2 = c2.collect(namespace="ns")
     for a, b in zip(m1, m2):
         assert [v for _, v in a.cpu_usage] == [v for _, v in b.cpu_usage]
+
+
+def test_list_namespaces():
+    """Mock collector returns demo-app as the only namespace."""
+    collector = MockCollector()
+    namespaces = collector.list_namespaces()
+    assert namespaces == ["demo-app"]

@@ -1,27 +1,36 @@
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-gray-900">Top Over-Provisioned Deployments</h2>
-        <span class="text-sm text-gray-500">{{ report.profiles|length }} shown</span>
+        <h2 class="text-lg font-semibold text-gray-900">All Deployments</h2>
+        <span class="text-sm text-gray-500">{{ report.profiles|length }} total</span>
     </div>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deployment</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU Util</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mem Util</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waste Score</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU Req</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mem Req</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                {% for p in report.profiles %}
+                {% for p in report.profiles|sort(attribute='sizing_category', reverse=true) %}
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="text-sm font-medium text-gray-900">{{ p.name }}</span>
                         <span class="block text-xs text-gray-400">{{ p.namespace }} &middot; {{ p.replica_count }} replicas</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if p.sizing_category == "under-provisioned" %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Under-sized</span>
+                        {% elif p.sizing_category == "over-provisioned" %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Over-sized</span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Right-sized</span>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
@@ -40,12 +49,6 @@
                             </div>
                             <span class="text-sm text-gray-700">{{ p.memory_utilization_pct }}%</span>
                         </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                            {% if p.waste_pct > 60 %}bg-red-100 text-red-800{% elif p.waste_pct > 30 %}bg-amber-100 text-amber-800{% else %}bg-green-100 text-green-800{% endif %}">
-                            {{ p.waste_pct|int }}%
-                        </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.cpu_request_fmt }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ p.memory_request_fmt }}</td>

@@ -2,9 +2,20 @@
 {% block title %}kube-foresight &middot; Recommendations{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-    <h1 class="text-2xl font-bold text-gray-900">Recommendations</h1>
-    <p class="text-sm text-gray-500 mt-1">Right-sizing suggestions for {{ report.analyzed_deployments }} deployments</p>
+<div class="mb-6 flex items-center justify-between">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Recommendations</h1>
+        <p class="text-sm text-gray-500 mt-1">Right-sizing suggestions for {{ report.analyzed_deployments }} deployments</p>
+    </div>
+    {% if report.recommendations|length > 0 %}
+    <a href="/api/patches/download"
+        class="inline-flex items-center px-4 py-2.5 bg-kf-accent text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Download All (ZIP)
+    </a>
+    {% endif %}
 </div>
 
 {% if report.recommendations|length == 0 %}
@@ -45,6 +56,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         <a href="?sort=confidence" class="hover:text-gray-900">Confidence</a>
                     </th>
+                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Patch</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">

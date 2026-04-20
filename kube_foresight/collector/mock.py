@@ -39,6 +39,9 @@ class MockCollector(BaseCollector):
     def check_connection(self) -> tuple[bool, str]:
         return True, "Mock collector (synthetic data)"
 
+    def list_namespaces(self) -> list[str]:
+        return ["demo-app"]
+
     def collect(
         self,
         namespace: str = "demo-app",

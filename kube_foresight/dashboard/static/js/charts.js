@@ -69,8 +69,10 @@ function renderUtilizationChart(canvasId, profiles) {
 
 /**
  * Time-series line chart with request/limit threshold lines.
+ * Optional forecastData parameter adds a dashed forecast line with confidence band.
+ * forecastData shape: { forecast_points: [{timestamp, value, lower_bound, upper_bound}], trend, days_until_request_breach }
  */
-function renderTimeseriesChart(canvasId, tsData, resource, title) {
+function renderTimeseriesChart(canvasId, tsData, resource, title, forecastData) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
 
@@ -79,29 +81,79 @@ function renderTimeseriesChart(canvasId, tsData, resource, title) {
     const isMemory = resource === 'memory';
     const unit = isMemory ? 'Mi' : 'cores';
 
+    const datasets = [
+        {
+            label: `${title}`,
+            data: resData.usage,
+            borderColor: KF_COLORS.blue,
+            backgroundColor: KF_COLORS.blue + '20',
+            borderWidth: 1.5,
+            fill: true,
+            pointRadius: 0,
+            tension: 0.3,
+        },
+    ];
+
+    // Add forecast overlay datasets if available
+    if (forecastData && forecastData.forecast_points && forecastData.forecast_points.length > 0) {
+        const fcPoints = forecastData.forecast_points;
+        const fcLabels = fcPoints.map(fp => fp.timestamp);
+        const fcValues = fcPoints.map(fp => isMemory ? fp.value / (1024 * 1024) : fp.value);
+        const fcUpper = fcPoints.map(fp => isMemory ? fp.upper_bound / (1024 * 1024) : fp.upper_bound);
+        const fcLower = fcPoints.map(fp => isMemory ? fp.lower_bound / (1024 * 1024) : fp.lower_bound);
+
+        // Forecast line (dashed orange)
+        datasets.push({
+            label: 'Forecast',
+            data: fcLabels.map((t, i) => ({ x: t, y: fcValues[i] })),
+            borderColor: KF_COLORS.orange,
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            tension: 0.1,
+        });
+
+        // Confidence band (upper bound)
+        datasets.push({
+            label: 'Upper bound',
+            data: fcLabels.map((t, i) => ({ x: t, y: fcUpper[i] })),
+            borderColor: 'transparent',
+            backgroundColor: KF_COLORS.orange + '15',
+            pointRadius: 0,
+            fill: '+1',
+        });
+
+        // Confidence band (lower bound)
+        datasets.push({
+            label: 'Lower bound',
+            data: fcLabels.map((t, i) => ({ x: t, y: fcLower[i] })),
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            fill: false,
+        });
+    }
+
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [
-                {
-                    label: `${title}`,
-                    data: resData.usage,
-                    borderColor: KF_COLORS.blue,
-                    backgroundColor: KF_COLORS.blue + '20',
-                    borderWidth: 1.5,
-                    fill: true,
-                    pointRadius: 0,
-                    tension: 0.3,
-                },
-            ],
+            datasets: datasets,
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { intersect: false, mode: 'index' },
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: !!(forecastData && forecastData.forecast_points && forecastData.forecast_points.length),
+                    labels: {
+                        filter: function(item) {
+                            return item.text !== 'Upper bound' && item.text !== 'Lower bound';
+                        },
+                    },
+                },
                 annotation: {
                     annotations: {
                         requestLine: {
@@ -281,6 +333,94 @@ function renderSavingsBar(canvasId, costs) {
                 x: {
                     beginAtZero: true,
                     title: { display: true, text: 'Monthly Savings ($)' },
+                },
+            },
+        },
+    });
+}
+
+/**
+ * Doughnut chart: sizing distribution (over/right/under-provisioned).
+ */
+function renderSizingDonut(canvasId, counts) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Over-provisioned', 'Right-sized', 'Under-provisioned'],
+            datasets: [{
+                data: [counts.over || 0, counts.right || 0, counts.under || 0],
+                backgroundColor: [KF_COLORS.amber + 'CC', KF_COLORS.green + 'CC', KF_COLORS.red + 'CC'],
+                borderWidth: 2,
+                borderColor: '#fff',
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { boxWidth: 14, font: { size: 12 } },
+                },
+            },
+        },
+    });
+}
+
+/**
+ * Grouped bar chart: cloud cost comparison across providers.
+ * cloudData shape: { providers: { aws: { name, total_current, total_savings }, ... }, cheapest }
+ */
+function renderCloudComparisonBar(canvasId, cloudData) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+
+    const keys = Object.keys(cloudData.providers);
+    const labels = keys.map(k => cloudData.providers[k].name);
+    const currentCosts = keys.map(k => cloudData.providers[k].total_current);
+    const recommendedCosts = keys.map(k => cloudData.providers[k].total_recommended);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Current Monthly Cost ($)',
+                    data: currentCosts,
+                    backgroundColor: KF_COLORS.red + '80',
+                    borderColor: KF_COLORS.red,
+                    borderWidth: 1,
+                },
+                {
+                    label: 'Optimized Monthly Cost ($)',
+                    data: recommendedCosts,
+                    backgroundColor: KF_COLORS.green + '80',
+                    borderColor: KF_COLORS.green,
+                    borderWidth: 1,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: $${context.parsed.y.toFixed(2)}/mo`;
+                        },
+                    },
+                },
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Monthly Cost ($)' },
                 },
             },
         },

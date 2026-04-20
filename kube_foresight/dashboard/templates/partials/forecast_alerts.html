@@ -1,0 +1,26 @@
+{% if at_risk and at_risk|length > 0 %}
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">At Risk Deployments</h2>
+    <p class="text-sm text-gray-500 mb-4">Deployments predicted to breach resource limits based on current growth trends.</p>
+    <div class="space-y-3">
+        {% for fc in at_risk %}
+        <div class="flex items-start gap-3 p-3 rounded-lg {% if fc.risk_level == 'critical' %}bg-red-50 border border-red-200{% else %}bg-amber-50 border border-amber-200{% endif %}">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase mt-0.5
+                {% if fc.risk_level == 'critical' %}bg-red-100 text-red-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                {{ fc.risk_level }}
+            </span>
+            <div class="flex-1 min-w-0">
+                <a href="/deployments/{{ fc.deployment_name }}" class="text-sm font-medium text-gray-900 hover:text-kf-accent">
+                    {{ fc.deployment_name }}
+                </a>
+                <p class="text-sm text-gray-600 mt-0.5">{{ fc.summary }}</p>
+                <div class="flex gap-4 mt-1 text-xs text-gray-500">
+                    <span>CPU: {{ fc.cpu_forecast.trend }}{% if fc.cpu_forecast.days_until_request_breach %} &middot; breach in {{ fc.cpu_forecast.days_until_request_breach|round(0)|int }}d{% endif %}</span>
+                    <span>Mem: {{ fc.memory_forecast.trend }}{% if fc.memory_forecast.days_until_request_breach %} &middot; breach in {{ fc.memory_forecast.days_until_request_breach|round(0)|int }}d{% endif %}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
