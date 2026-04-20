@@ -6,7 +6,12 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from kube_foresight.models import CostEstimate, DeploymentProfile, Recommendation
+from kube_foresight.models import (
+    CostEstimate,
+    DeploymentForecast,
+    DeploymentProfile,
+    Recommendation,
+)
 from kube_foresight.recommender.patch import format_cpu, format_memory
 
 
@@ -128,6 +133,74 @@ def render_patch_summary(patch_files: list[str], console: Console) -> None:
         console.print(f"  {f}")
     console.print()
     console.print("[dim]Apply with: kubectl apply -f <patch-file>[/dim]")
+
+
+def render_forecast_table(forecasts: list[DeploymentForecast], console: Console) -> None:
+    """Render forecast results as a Rich table."""
+    risk_order = {"critical": 0, "warning": 1, "ok": 2}
+    sorted_fc = sorted(forecasts, key=lambda f: risk_order.get(f.risk_level, 3))
+
+    table = Table(title="Resource Usage Forecasts", show_lines=True)
+    table.add_column("#", justify="right", style="bold", width=3)
+    table.add_column("Deployment", style="cyan")
+    table.add_column("Risk", justify="center")
+    table.add_column("CPU Trend", justify="center")
+    table.add_column("Mem Trend", justify="center")
+    table.add_column("CPU Breach", justify="right")
+    table.add_column("Mem Breach", justify="right")
+    table.add_column("CPU R\u00b2", justify="right")
+    table.add_column("Mem R\u00b2", justify="right")
+
+    for i, fc in enumerate(sorted_fc, 1):
+        risk_style = {"critical": "red", "warning": "yellow", "ok": "green"}[fc.risk_level]
+        cpu_breach = _format_breach_days(fc.cpu_forecast.days_until_request_breach)
+        mem_breach = _format_breach_days(fc.memory_forecast.days_until_request_breach)
+
+        table.add_row(
+            str(i),
+            fc.deployment_name,
+            f"[{risk_style}]{fc.risk_level.upper()}[/{risk_style}]",
+            fc.cpu_forecast.trend.value,
+            fc.memory_forecast.trend.value,
+            cpu_breach,
+            mem_breach,
+            f"{fc.cpu_forecast.r_squared:.2f}",
+            f"{fc.memory_forecast.r_squared:.2f}",
+        )
+
+    console.print()
+    console.print(table)
+
+    # Summary panel with at-risk count
+    at_risk = [f for f in forecasts if f.risk_level != "ok"]
+    if at_risk:
+        lines = []
+        for fc in sorted(at_risk, key=lambda f: risk_order.get(f.risk_level, 3)):
+            risk_style = {"critical": "red", "warning": "yellow"}[fc.risk_level]
+            lines.append(f"[{risk_style}]{fc.risk_level.upper()}[/{risk_style}] {fc.summary}")
+        console.print()
+        console.print(
+            Panel("\n".join(lines), title=f"At Risk ({len(at_risk)})", border_style="red")
+        )
+    else:
+        console.print()
+        console.print(
+            "[bold green]All deployments are stable"
+            " — no breaches predicted.[/bold green]"
+        )
+
+
+def _format_breach_days(days: float | None) -> str:
+    """Format breach timeline with color."""
+    if days is None:
+        return "[green]--[/green]"
+    if days <= 0:
+        return "[red]BREACHED[/red]"
+    if days <= 7:
+        return f"[red]{days:.0f}d[/red]"
+    if days <= 14:
+        return f"[yellow]{days:.0f}d[/yellow]"
+    return f"{days:.0f}d"
 
 
 def _colorize_util(text: str, ratio: float) -> str:

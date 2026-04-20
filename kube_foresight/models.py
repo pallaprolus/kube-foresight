@@ -18,6 +18,13 @@ class ConfidenceLevel(str, Enum):
     LOW = "low"
 
 
+class TrendDirection(str, Enum):
+    GROWING = "growing"
+    DECLINING = "declining"
+    STEADY = "steady"
+    CYCLIC = "cyclic"
+
+
 @dataclass
 class ResourceSpec:
     """CPU (cores) or Memory (bytes) specification."""
@@ -119,3 +126,42 @@ class AnalysisReport:
     total_monthly_savings_usd: float
     total_annual_savings_usd: float
     generated_at: datetime = field(default_factory=datetime.utcnow)
+
+
+@dataclass
+class ForecastPoint:
+    """A single predicted data point in the future."""
+
+    timestamp: datetime
+    value: float
+    lower_bound: float
+    upper_bound: float
+
+
+@dataclass
+class ResourceForecast:
+    """Forecast for a single resource type (CPU or memory)."""
+
+    resource_type: ResourceType
+    trend: TrendDirection
+    slope_per_day: float
+    r_squared: float
+    current_value: float
+    request_value: float
+    limit_value: float
+    days_until_request_breach: float | None
+    days_until_limit_breach: float | None
+    forecast_points: list[ForecastPoint] = field(default_factory=list)
+    sufficient_data: bool = True
+
+
+@dataclass
+class DeploymentForecast:
+    """Complete forecast for a deployment combining CPU and memory."""
+
+    deployment_name: str
+    namespace: str
+    cpu_forecast: ResourceForecast
+    memory_forecast: ResourceForecast
+    risk_level: str  # "critical", "warning", "ok"
+    summary: str

@@ -8,6 +8,7 @@ from kube_foresight.cli.commands.analyze import analyze
 from kube_foresight.cli.commands.collect import collect
 from kube_foresight.cli.commands.dashboard import dashboard
 from kube_foresight.cli.commands.demo import demo
+from kube_foresight.cli.commands.forecast import forecast
 from kube_foresight.cli.commands.patch import patch
 from kube_foresight.cli.commands.recommend import recommend
 
@@ -21,6 +22,7 @@ app = typer.Typer(
 app.command()(analyze)
 app.command()(collect)
 app.command()(dashboard)
+app.command()(forecast)
 app.command()(recommend)
 app.command()(patch)
 app.command()(demo)
