@@ -94,9 +94,10 @@ def render_cost_summary(
     total_monthly: float,
     total_annual: float,
     console: Console,
+    provider_name: str = "AWS (us-east-1, on-demand)",
 ) -> None:
     """Render cost savings with a summary panel."""
-    table = Table(title="Cost Impact (AWS us-east-1, on-demand)", show_lines=True)
+    table = Table(title=f"Cost Impact ({provider_name})", show_lines=True)
     table.add_column("Deployment", style="cyan")
     table.add_column("Replicas", justify="right")
     table.add_column("Current $/mo", justify="right")

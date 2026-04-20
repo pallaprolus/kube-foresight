@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
+
 from kube_foresight.models import CostEstimate, DeploymentProfile, Recommendation
-from kube_foresight.pricing.providers.aws import AWSPricingProvider
+from kube_foresight.pricing.providers import get_provider
 from kube_foresight.pricing.providers.base import BasePricingProvider
 
 HOURS_PER_MONTH = 730  # 365.25 * 24 / 12
@@ -19,7 +21,7 @@ def estimate_cost(
     Cost is based on resource requests (what is reserved), not actual usage.
     """
     if provider is None:
-        provider = AWSPricingProvider()
+        provider = get_provider(os.environ.get("KF_CLOUD_PROVIDER", "aws"))
 
     replicas = profile.replica_count
     mem_gib_current = profile.memory_spec.request / (1024**3)

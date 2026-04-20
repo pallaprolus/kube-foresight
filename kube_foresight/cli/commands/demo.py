@@ -18,6 +18,10 @@ def demo(
     output_dir: Optional[str] = typer.Option(
         None, "--output-dir", "-o", help="Write YAML patches to this directory"
     ),
+    cloud_provider: str = typer.Option(
+        "aws", "--cloud-provider",
+        help="Cloud provider: aws, gcp, azure",
+    ),
 ) -> None:
     """Run full analysis with synthetic data (no Prometheus needed)."""
     from kube_foresight.analyzer.profiler import profile_deployments, rank_by_over_provisioning
@@ -29,6 +33,7 @@ def demo(
     )
     from kube_foresight.collector import get_collector
     from kube_foresight.pricing.estimator import estimate_namespace_costs
+    from kube_foresight.pricing.providers import get_provider
     from kube_foresight.recommender.engine import generate_recommendations
     from kube_foresight.recommender.patch import write_patches
 
@@ -51,10 +56,14 @@ def demo(
     recommendations = generate_recommendations(ranked, strategy=strategy, headroom=headroom)
     render_recommendations_table(recommendations, console)
 
-    estimates = estimate_namespace_costs(ranked, recommendations)
+    provider = get_provider(cloud_provider)
+    estimates = estimate_namespace_costs(ranked, recommendations, provider=provider)
     total_monthly = sum(e.monthly_savings_usd for e in estimates)
     total_annual = sum(e.annual_savings_usd for e in estimates)
-    render_cost_summary(estimates, total_monthly, total_annual, console)
+    render_cost_summary(
+        estimates, total_monthly, total_annual, console,
+        provider_name=provider.provider_name(),
+    )
 
     if output_dir:
         patch_files = write_patches(recommendations, output_dir=output_dir)
