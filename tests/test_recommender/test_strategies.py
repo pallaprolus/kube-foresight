@@ -58,3 +58,24 @@ def test_invalid_strategy_raises_value_error():
     stats = _make_stats()
     with pytest.raises(ValueError, match="Unknown strategy 'mean'"):
         recommend_by_percentile(stats, current_request=1.0, current_limit=2.0, percentile="mean")
+
+
+def test_recommend_direction_up_never_below_current():
+    """When direction=up, recommendation should never be less than current."""
+    stats = _make_stats(p95=0.15)
+    req, lim = recommend_by_percentile(
+        stats, current_request=1.0, current_limit=2.0, direction="up"
+    )
+    assert req >= 1.0
+    assert lim >= 2.0
+
+
+def test_recommend_direction_up_increases_when_needed():
+    """When p95 exceeds current request, direction=up should recommend higher."""
+    stats = _make_stats(p95=1.5)
+    req, lim = recommend_by_percentile(
+        stats, current_request=1.0, current_limit=2.0, direction="up"
+    )
+    # 1.5 * 1.2 = 1.8 > 1.0 → req should be 1.8
+    assert req == pytest.approx(1.8)
+    assert lim == pytest.approx(1.8 * 1.5)  # 2.7

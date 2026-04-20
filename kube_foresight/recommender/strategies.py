@@ -13,8 +13,13 @@ def recommend_by_percentile(
     headroom: float = 0.20,
     limit_ratio: float = 1.5,
     floor: float = 0.0,
+    direction: str = "down",
 ) -> tuple[float, float]:
     """Compute recommended request and limit based on usage percentile.
+
+    Args:
+        direction: "down" to only decrease (over-provisioned),
+                   "up" to only increase (under-provisioned).
 
     Returns:
         (recommended_request, recommended_limit)
@@ -32,9 +37,14 @@ def recommend_by_percentile(
     recommended_request = base * (1 + headroom)
     recommended_limit = recommended_request * limit_ratio
 
-    # Only right-size down, never up
-    recommended_request = min(recommended_request, current_request)
-    recommended_limit = min(recommended_limit, current_limit)
+    if direction == "down":
+        # Only right-size down, never up
+        recommended_request = min(recommended_request, current_request)
+        recommended_limit = min(recommended_limit, current_limit)
+    else:
+        # Only right-size up, never down
+        recommended_request = max(recommended_request, current_request)
+        recommended_limit = max(recommended_limit, current_limit)
 
     # Apply floor
     recommended_request = max(recommended_request, floor)

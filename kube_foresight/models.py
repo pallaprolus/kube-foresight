@@ -18,6 +18,12 @@ class ConfidenceLevel(str, Enum):
     LOW = "low"
 
 
+class SizingCategory(str, Enum):
+    UNDER_PROVISIONED = "under-provisioned"
+    RIGHT_SIZED = "right-sized"
+    OVER_PROVISIONED = "over-provisioned"
+
+
 class TrendDirection(str, Enum):
     GROWING = "growing"
     DECLINING = "declining"
@@ -76,6 +82,7 @@ class DeploymentProfile:
     cpu_utilization_ratio: float
     memory_utilization_ratio: float
     over_provisioning_score: float
+    sizing_category: SizingCategory = SizingCategory.RIGHT_SIZED
 
 
 @dataclass

@@ -11,15 +11,28 @@ from kube_foresight.models import (
     DeploymentForecast,
     DeploymentProfile,
     Recommendation,
+    SizingCategory,
 )
 from kube_foresight.recommender.patch import format_cpu, format_memory
+
+_CATEGORY_STYLES = {
+    SizingCategory.UNDER_PROVISIONED: ("[red]UNDER-SIZED[/red]", 0),
+    SizingCategory.OVER_PROVISIONED: ("[yellow]OVER-SIZED[/yellow]", 1),
+    SizingCategory.RIGHT_SIZED: ("[green]RIGHT-SIZED[/green]", 2),
+}
 
 
 def render_analysis_table(profiles: list[DeploymentProfile], console: Console) -> None:
     """Render a rich table of deployment profiles with usage stats."""
-    table = Table(title="Over-Provisioned Deployments", show_lines=True)
+    # Sort: under-provisioned first (urgent), then over-provisioned, then right-sized
+    sorted_profiles = sorted(
+        profiles, key=lambda p: _CATEGORY_STYLES[p.sizing_category][1]
+    )
+
+    table = Table(title="Deployment Resource Analysis", show_lines=True)
     table.add_column("#", justify="right", style="bold", width=3)
     table.add_column("Deployment", style="cyan")
+    table.add_column("Status", justify="center")
     table.add_column("Replicas", justify="right")
     table.add_column("CPU Req", justify="right")
     table.add_column("CPU p95", justify="right")
@@ -27,16 +40,16 @@ def render_analysis_table(profiles: list[DeploymentProfile], console: Console) -
     table.add_column("Mem Req", justify="right")
     table.add_column("Mem p95", justify="right")
     table.add_column("Mem Util%", justify="right")
-    table.add_column("Waste", justify="right", style="red bold")
 
-    for i, p in enumerate(profiles, 1):
+    for i, p in enumerate(sorted_profiles, 1):
         cpu_util_pct = f"{p.cpu_utilization_ratio * 100:.0f}%"
         mem_util_pct = f"{p.memory_utilization_ratio * 100:.0f}%"
-        waste_score = f"{p.over_provisioning_score:.2f}"
+        status_label = _CATEGORY_STYLES[p.sizing_category][0]
 
         table.add_row(
             str(i),
             p.name,
+            status_label,
             str(p.replica_count),
             format_cpu(p.cpu_spec.request),
             format_cpu(p.cpu_stats.p95),
@@ -44,7 +57,6 @@ def render_analysis_table(profiles: list[DeploymentProfile], console: Console) -
             format_memory(p.memory_spec.request),
             format_memory(p.memory_stats.p95),
             _colorize_util(mem_util_pct, p.memory_utilization_ratio),
-            waste_score,
         )
 
     console.print()
@@ -67,8 +79,8 @@ def render_recommendations_table(
     table.add_column("Confidence", justify="center")
 
     for i, r in enumerate(recommendations, 1):
-        cpu_delta = f"-{r.cpu_reduction_pct:.0f}%"
-        mem_delta = f"-{r.memory_reduction_pct:.0f}%"
+        cpu_delta = _format_delta(r.cpu_reduction_pct)
+        mem_delta = _format_delta(r.memory_reduction_pct)
         conf_style = {"high": "green", "medium": "yellow", "low": "red"}.get(
             r.confidence.value, "white"
         )
@@ -78,10 +90,10 @@ def render_recommendations_table(
             r.deployment_name,
             format_cpu(r.current_cpu_request),
             format_cpu(r.recommended_cpu_request),
-            f"[red]{cpu_delta}[/red]" if r.cpu_reduction_pct > 0 else cpu_delta,
+            cpu_delta,
             format_memory(r.current_memory_request),
             format_memory(r.recommended_memory_request),
-            f"[red]{mem_delta}[/red]" if r.memory_reduction_pct > 0 else mem_delta,
+            mem_delta,
             f"[{conf_style}]{r.confidence.value}[/{conf_style}]",
         )
 
@@ -210,3 +222,16 @@ def _colorize_util(text: str, ratio: float) -> str:
     if ratio < 0.6:
         return f"[yellow]{text}[/yellow]"
     return f"[green]{text}[/green]"
+
+
+def _format_delta(reduction_pct: float) -> str:
+    """Format a reduction percentage with color.
+
+    Positive = decrease (over-provisioned, shown in red).
+    Negative = increase (under-provisioned, shown in green).
+    """
+    if reduction_pct > 0:
+        return f"[red]-{reduction_pct:.0f}%[/red]"
+    if reduction_pct < 0:
+        return f"[green]+{abs(reduction_pct):.0f}%[/green]"
+    return "0%"

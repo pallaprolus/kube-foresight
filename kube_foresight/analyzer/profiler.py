@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from kube_foresight.analyzer.stats import aggregate_deployment_metrics, compute_usage_stats
-from kube_foresight.models import ContainerMetrics, DeploymentProfile
+from kube_foresight.models import ContainerMetrics, DeploymentProfile, SizingCategory
 
 
 def compute_over_provisioning_score(
@@ -18,6 +18,28 @@ def compute_over_provisioning_score(
     cpu_waste = max(0.0, 1.0 - cpu_utilization_ratio)
     mem_waste = max(0.0, 1.0 - memory_utilization_ratio)
     return min(1.0, 0.6 * cpu_waste + 0.4 * mem_waste)
+
+
+def classify_sizing(
+    cpu_p95: float,
+    cpu_request: float,
+    memory_p95: float,
+    memory_request: float,
+) -> SizingCategory:
+    """Classify a deployment based on p95 utilization vs requests.
+
+    Under-provisioned: CPU or memory p95 > 80% of request (throttling/OOM risk).
+    Over-provisioned:  CPU and memory p95 < 30% of request (wasting resources).
+    Right-sized:       Everything else.
+    """
+    cpu_p95_ratio = cpu_p95 / cpu_request if cpu_request > 0 else 0.0
+    mem_p95_ratio = memory_p95 / memory_request if memory_request > 0 else 0.0
+
+    if cpu_p95_ratio > 0.8 or mem_p95_ratio > 0.8:
+        return SizingCategory.UNDER_PROVISIONED
+    if cpu_p95_ratio < 0.3 and mem_p95_ratio < 0.3:
+        return SizingCategory.OVER_PROVISIONED
+    return SizingCategory.RIGHT_SIZED
 
 
 def profile_deployments(
@@ -66,6 +88,9 @@ def profile_deployments(
                 cpu_utilization_ratio=cpu_util,
                 memory_utilization_ratio=mem_util,
                 over_provisioning_score=compute_over_provisioning_score(cpu_util, mem_util),
+                sizing_category=classify_sizing(
+                    cpu_stats.p95, cpu_spec.request, mem_stats.p95, mem_spec.request
+                ),
             )
         )
 

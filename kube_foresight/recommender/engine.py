@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from kube_foresight.models import DeploymentProfile, Recommendation
+from kube_foresight.models import DeploymentProfile, Recommendation, SizingCategory
 from kube_foresight.recommender.strategies import determine_confidence, recommend_by_percentile
 
 # Minimum floors: 10m CPU, 16Mi memory
@@ -19,6 +19,14 @@ def generate_recommendations(
     recommendations: list[Recommendation] = []
 
     for profile in profiles:
+        # Skip right-sized deployments — no recommendation needed
+        if profile.sizing_category == SizingCategory.RIGHT_SIZED:
+            continue
+
+        direction = (
+            "up" if profile.sizing_category == SizingCategory.UNDER_PROVISIONED else "down"
+        )
+
         rec_cpu_req, rec_cpu_lim = recommend_by_percentile(
             stats=profile.cpu_stats,
             current_request=profile.cpu_spec.request,
@@ -26,6 +34,7 @@ def generate_recommendations(
             percentile=strategy,
             headroom=headroom,
             floor=_CPU_FLOOR,
+            direction=direction,
         )
         rec_mem_req, rec_mem_lim = recommend_by_percentile(
             stats=profile.memory_stats,
@@ -34,6 +43,7 @@ def generate_recommendations(
             percentile=strategy,
             headroom=headroom,
             floor=_MEM_FLOOR,
+            direction=direction,
         )
 
         cpu_reduction = (
