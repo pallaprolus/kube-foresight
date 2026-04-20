@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kf-demo
+---
+# Over-provisioned nginx (requests 500m CPU but uses ~5m)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+  namespace: kf-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web-frontend
+  template:
+    metadata:
+      labels:
+        app: web-frontend
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "256Mi"
+          limits:
+            cpu: "1"
+            memory: "512Mi"
+        ports:
+        - containerPort: 80
+---
+# Over-provisioned API server (simple sleep loop)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: kf-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-server
+  template:
+    metadata:
+      labels:
+        app: api-server
+    spec:
+      containers:
+      - name: api
+        image: busybox:latest
+        command: ["sh", "-c", "while true; do echo ok > /dev/null; sleep 10; done"]
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+---
+# Moderately provisioned worker
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: background-worker
+  namespace: kf-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: background-worker
+  template:
+    metadata:
+      labels:
+        app: background-worker
+    spec:
+      containers:
+      - name: worker
+        image: busybox:latest
+        command: ["sh", "-c", "while true; do dd if=/dev/zero of=/dev/null bs=1k count=100 2>/dev/null; sleep 5; done"]
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "64Mi"
+          limits:
+            cpu: "400m"
+            memory: "128Mi"
+---
+# Cache service (redis - typically over-provisioned on memory)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-redis
+  namespace: kf-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cache-redis
+  template:
+    metadata:
+      labels:
+        app: cache-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+        ports:
+        - containerPort: 6379
