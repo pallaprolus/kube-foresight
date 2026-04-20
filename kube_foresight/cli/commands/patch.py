@@ -10,7 +10,9 @@ console = Console()
 
 def patch(
     namespace: str = typer.Option(..., "--namespace", "-n", help="Kubernetes namespace"),
-    prometheus_url: str = typer.Option(..., "--prometheus-url", "-p", help="Prometheus base URL"),
+    mode: str = typer.Option("prometheus", "--mode", "-m", help="Mode: prometheus, k8s, mock"),
+    prometheus_url: str = typer.Option("", "--prometheus-url", "-p", help="Prometheus base URL"),
+    db_path: str = typer.Option("", "--db-path", help="SQLite DB path (k8s mode)"),
     strategy: str = typer.Option("p95", "--strategy", "-s", help="Strategy: p95, p99, max"),
     headroom: float = typer.Option(0.20, "--headroom", help="Safety margin (0.0-1.0)"),
     lookback: int = typer.Option(168, "--lookback", help="Lookback period in hours"),
@@ -24,8 +26,20 @@ def patch(
     from kube_foresight.recommender.engine import generate_recommendations
     from kube_foresight.recommender.patch import write_patches
 
-    with console.status("[bold green]Connecting to Prometheus..."):
-        collector = get_collector(mode="prometheus", prometheus_url=prometheus_url)
+    kwargs: dict = {}
+    if mode == "prometheus" and not prometheus_url:
+        console.print("[red]--prometheus-url is required for prometheus mode[/red]")
+        raise typer.Exit(1)
+    if mode == "k8s" and db_path:
+        kwargs["db_path"] = db_path
+
+    label = {"prometheus": "Prometheus", "k8s": "Kubernetes", "mock": "mock data"}.get(mode, mode)
+    with console.status(f"[bold green]Connecting to {label}..."):
+        collector = get_collector(
+            mode=mode,
+            prometheus_url=prometheus_url or None,
+            **kwargs,
+        )
         ok, msg = collector.check_connection()
         if not ok:
             console.print(f"[red]Connection failed: {msg}[/red]")
