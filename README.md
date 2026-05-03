@@ -125,6 +125,8 @@ ruff check .
 helm lint charts/kube-foresight
 ```
 
+For codebase layout, conventions, and the data-flow diagram, see [`docs/architecture.md`](docs/architecture.md).
+
 ## Contributing
 
 Issues and PRs are very welcome — particularly: real-world deployment reports, additional pricing providers, and validation of forecast accuracy on production traces. See [`CONTRIBUTING.md`](CONTRIBUTING.md) once filed.

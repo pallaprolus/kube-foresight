@@ -1,34 +1,8 @@
-# CLAUDE.md — kube-foresight
+# Architecture
 
-## Project Overview
+This document is the contributor-facing map of the codebase: how data flows, where each piece lives, and the conventions to follow when extending it.
 
-**kube-foresight** is a Predictive Resource Optimizer for Kubernetes. It identifies over-provisioned deployments, generates right-sizing recommendations with YAML patches, forecasts resource trends, and estimates cost savings.
-
-- **Repo**: https://github.com/pallaprolus/kube-foresight
-- **License**: Apache 2.0
-- **Python**: 3.10+ (developed on 3.10)
-- **Entry point**: `kube-foresight` CLI via `kube_foresight.cli.app:main`
-
-## Quick Commands
-
-```bash
-# Run tests
-python3.10 -m pytest tests/ -v --tb=short
-
-# Lint
-python3.10 -m ruff check .
-
-# Run dashboard (mock mode)
-python3.10 -m kube_foresight.cli.app dashboard --demo
-
-# Run full demo pipeline
-python3.10 -m kube_foresight.cli.app demo
-
-# Helm lint
-helm lint charts/kube-foresight
-```
-
-## Architecture
+## Pipeline
 
 ```
 Metrics Source (K8s API / Prometheus / Mock)
@@ -38,11 +12,11 @@ Metrics Source (K8s API / Prometheus / Mock)
         → Recommender (recommender/) → Recommendation
           → Patch Generator + Cost Estimator (pricing/)
         → Forecaster (forecaster/) → DeploymentForecast
-  → Dashboard (dashboard/) ← FastAPI + Jinja2 + HTMX + Chart.js
-  → CLI (cli/) ← Typer + Rich
+  → Dashboard (dashboard/)  ← FastAPI + Jinja2 + HTMX + Chart.js
+  → CLI (cli/)              ← Typer + Rich
 ```
 
-## Directory Layout
+## Directory layout
 
 ```
 kube_foresight/
@@ -81,26 +55,26 @@ kube_foresight/
 │   └── commands/          #   analyze, collect, dashboard, demo, forecast, patch, recommend
 └── dashboard/             # Web UI (FastAPI)
     ├── app.py             #   App factory, lifespan, health probes
-    ├── service.py          #   AnalysisService (caching layer + multi-cloud)
-    ├── serializers.py      #   Dict serialization for API/templates
-    ├── routes/api.py       #   REST + HTMX endpoints (incl. namespace discovery)
-    ├── routes/pages.py     #   HTML page routes (3 pages: overview, recommendations, costs + detail)
-    ├── static/             #   CSS, JS (Chart.js, HTMX, clipboard, app utilities)
-    └── templates/          #   Jinja2 (base, 4 pages, partials)
+    ├── service.py         #   AnalysisService (caching layer + multi-cloud)
+    ├── serializers.py     #   Dict serialization for API/templates
+    ├── routes/api.py      #   REST + HTMX endpoints (incl. namespace discovery)
+    ├── routes/pages.py    #   HTML page routes (overview, recommendations, costs + detail)
+    ├── static/            #   CSS, JS (Chart.js, HTMX, clipboard, app utilities)
+    └── templates/         #   Jinja2 (base, pages, partials)
 ```
 
-## Key Conventions
+## Conventions
 
-- **Models**: All domain types live in `models.py` — dataclasses, not Pydantic
-- **Collectors**: Implement `BaseCollector` (check_connection, collect). Factory in `collector/__init__.py`
-- **Three modes**: `mock` (demo), `k8s` (Metrics API), `prometheus` (PromQL)
-- **Service layer**: `dashboard/service.py` wraps the pipeline with `AnalysisCache`
-- **Serializers**: Separate `serializers.py` converts dataclasses → dicts for JSON/templates
-- **Templates**: Jinja2 with Tailwind CSS classes, HTMX for interactivity
-- **Config**: Environment variables prefixed `KF_` (see Helm values.yaml)
-- **Tests**: Mirror source structure under `tests/`. Use `mode="mock", seed=42` for deterministic tests
+- **Models** — all domain types live in `models.py` as dataclasses, not Pydantic
+- **Collectors** — implement `BaseCollector` (`check_connection`, `collect`); factory in `collector/__init__.py`
+- **Three modes** — `mock` (demo / CI), `k8s` (Metrics API), `prometheus` (PromQL)
+- **Service layer** — `dashboard/service.py` wraps the pipeline with `AnalysisCache`
+- **Serializers** — `dashboard/serializers.py` converts dataclasses → dicts for JSON/templates
+- **Templates** — Jinja2 with Tailwind CSS classes; HTMX for interactivity
+- **Config** — environment variables prefixed `KF_` (see [`charts/kube-foresight/values.yaml`](../charts/kube-foresight/values.yaml))
+- **Tests** — mirror source structure under `tests/`; use `mode="mock", seed=42` for deterministic fixtures
 
-## Environment Variables
+## Environment variables
 
 | Variable | Purpose | Default |
 |---|---|---|
@@ -116,15 +90,9 @@ kube_foresight/
 | `KF_SLACK_WEBHOOK_URL` | Slack incoming webhook | _(none)_ |
 | `KF_CLOUD_PROVIDER` | Cloud pricing: `aws`, `gcp`, `azure` | `aws` |
 
-## Git Conventions
-
-- Do NOT include `Co-Authored-By: Claude` in commit messages
-- Commit messages: imperative mood, concise, focus on "why"
-- Branch naming: `feature/`, `fix/`, `refactor/` prefixes
-
 ## Testing
 
-- 244 tests, all passing, 0 lint violations
+- 276 tests, all passing
 - Run: `python3.10 -m pytest tests/ -v --tb=short`
 - Mock collector generates 15 deployments (13 over-provisioned, 2 right-sized) with `seed=42`
 - Async tests use `pytest-asyncio` with `mode=strict`
@@ -132,7 +100,14 @@ kube_foresight/
 
 ## Dependencies
 
-**Core**: typer, rich, numpy, requests, pyyaml
-**Dashboard** (optional): fastapi, uvicorn, jinja2, python-multipart
-**K8s** (optional): kubernetes
-**Dev**: pytest, pytest-cov, ruff, httpx
+| Group | Packages |
+|-------|----------|
+| Core | typer, rich, numpy, requests, pyyaml |
+| Dashboard (optional) | fastapi, uvicorn, jinja2, python-multipart |
+| Kubernetes (optional) | kubernetes |
+| Dev | pytest, pytest-asyncio, pytest-cov, ruff, httpx |
+
+## Git conventions
+
+- Imperative mood, concise commit subjects, focus on "why" in the body
+- Branch prefixes: `feature/`, `fix/`, `refactor/`, `docs/`, `build/`
