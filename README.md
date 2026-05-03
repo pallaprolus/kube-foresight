@@ -1,141 +1,82 @@
 # kube-foresight
 
-Predictive Resource Optimizer for Kubernetes. Identifies over-provisioned deployments, generates right-sizing patches, forecasts resource trends, and estimates multi-cloud cost savings.
+**Right-size your Kubernetes deployments, forecast resource trends, and see the multi-cloud cost impact — in one tool, with kubectl-ready patches.**
 
-## The Problem
+[![CI](https://github.com/pallaprolus/kube-foresight/actions/workflows/ci.yml/badge.svg)](https://github.com/pallaprolus/kube-foresight/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PyPI](https://img.shields.io/pypi/v/kube-foresight.svg)](https://pypi.org/project/kube-foresight/)
+[![Status](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
 
-Teams massively over-provision Kubernetes resources out of fear of outages — setting CPU/memory requests based on guesswork. This leads to **40-70% wasted cloud spend** across most clusters.
+![Dashboard overview](docs/screenshots/overview.png)
 
-**kube-foresight** analyzes actual resource usage, identifies the most over-provisioned deployments, and generates kubectl-ready YAML patches with cost savings estimates.
+## Why kube-foresight?
 
-## Features
+Most teams over-provision Kubernetes by 40–70% out of fear of outages. Existing tools each solve a piece of this problem — kube-foresight ties the pieces together:
 
-- **Multi-source collection** — Kubernetes Metrics API, Prometheus, or mock data (no cluster needed)
-- **Statistical profiling** — p95/p99/max analysis with IQR anomaly filtering
-- **Right-sizing recommendations** — configurable strategies with confidence levels
-- **YAML patch generation** — kubectl-ready strategic merge patches
-- **Resource forecasting** — linear regression trends with breach prediction and risk classification
-- **Multi-cloud cost estimation** — AWS, GCP, and Azure pricing comparison
-- **Web dashboard** — FastAPI + HTMX with real-time analysis and Chart.js visualizations
-- **Executive dashboard** — single-page KPI summary for leadership with cloud cost comparison
-- **Role-based access** — Executive, Engineer, and Admin roles with API key authentication
-- **Background scheduler** — continuous collection and analysis with configurable intervals
-- **Alerting** — webhook and Slack notifications for at-risk deployments
-- **HPA conflict detection** — warns when recommendations conflict with autoscaler targets
-- **Audit trail** — SQLite-backed log of all analysis runs and patch applications
-- **Production ready** — Dockerfile, Helm chart, health probes, structured logging
+| Tool | Right-sizing recs | Patch output | Forecasting | Multi-cloud cost |
+|------|:-:|:-:|:-:|:-:|
+| **kube-foresight** | ✅ | ✅ kubectl YAML | ✅ breach prediction | ✅ AWS / GCP / Azure |
+| Goldilocks (Fairwinds) | ✅ | — VPA objects | — | — |
+| KRR (Robusta) | ✅ | — text suggestions | — | — |
+| VPA (native) | ✅ | — auto-applies | — | — |
+| Kubecost / OpenCost | partial | — | — | ✅ |
 
-## Quick Start
+If you're already happy with KRR for recommendations and Kubecost for spend, you don't need this. **kube-foresight exists for the case where you want a single CLI / dashboard that says "here's the patch, here's when you'll breach, and here's the dollar delta on AWS vs GCP vs Azure."**
 
-### Install
+## Status
+
+**Alpha — actively developed, not yet battle-tested in production.** Reports, issues, and PRs welcome. See [CHANGELOG / releases](https://github.com/pallaprolus/kube-foresight/releases).
+
+## Try it in 30 seconds (no cluster needed)
 
 ```bash
-pip install -e ".[dashboard]"
+pip install "kube-foresight[dashboard]"
+kube-foresight demo                 # full pipeline against synthetic data
+kube-foresight dashboard --demo     # web UI at http://localhost:8080
 ```
 
-### Try the Demo (No Cluster Needed)
+![Recommendations view](docs/screenshots/recommendations.png)
+
+## Use it on a real cluster
 
 ```bash
-# CLI demo — full pipeline with synthetic data
-kube-foresight demo
+# 1. Identify over-provisioned deployments (Metrics API or Prometheus)
+kube-foresight analyze   -n production --mode k8s
+kube-foresight recommend -n production --mode prometheus -p http://prometheus:9090
 
-# Web dashboard with demo data
-kube-foresight dashboard --demo
-```
-
-### With a Real Cluster
-
-```bash
-# Analyze using Kubernetes Metrics API
-kube-foresight analyze -n production --mode k8s
-
-# Analyze using Prometheus
-kube-foresight analyze -n production --mode prometheus -p http://prometheus:9090
-
-# Get recommendations with cost estimates
-kube-foresight recommend -n production --mode k8s
-
-# Generate YAML patches
+# 2. Generate kubectl-ready patches
 kube-foresight patch -n production --mode k8s -o ./patches
-
-# Apply a patch
 kubectl apply -f ./patches/api-gateway-patch.yaml
 
-# Forecast resource trends
+# 3. Forecast when usage will breach current limits
 kube-foresight forecast -n production --mode k8s
 ```
 
-### Web Dashboard
+## What's in the box
 
-```bash
-# Basic dashboard
-kube-foresight dashboard --demo
+- **Three collectors** — Kubernetes Metrics API, Prometheus, or mock (for demo / CI)
+- **Statistical right-sizing** — p95 / p99 / max strategies with IQR anomaly filtering and configurable headroom
+- **Forecasting** — linear regression on historical usage with breach-time prediction and risk classification
+- **Multi-cloud cost estimation** — AWS / GCP / Azure pricing side-by-side
+- **Patch generator** — strategic-merge YAML you can `kubectl apply`
+- **Web dashboard** — FastAPI + HTMX + Chart.js (executive summary, recommendations, costs)
+- **HPA conflict detection** — refuses to recommend changes that fight your autoscaler
+- **Production plumbing** — Dockerfile, Helm chart, health probes, structured JSON logs, optional Slack alerts
 
-# Continuous monitoring with Slack alerts
-kube-foresight dashboard \
-  --continuous \
-  --mode k8s \
-  --namespaces production,staging \
-  --slack-webhook-url https://hooks.slack.com/services/...
-```
+## CLI reference
 
-## CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `demo` | Full pipeline with synthetic data |
+| Command | Purpose |
+|---------|---------|
+| `demo` | Full pipeline with synthetic data — no cluster required |
 | `analyze` | Identify over-provisioned deployments |
-| `collect` | Collect and store metrics to SQLite |
-| `recommend` | Generate right-sizing recommendations + cost estimates |
-| `patch` | Generate YAML patches for kubectl apply |
+| `collect` | Snapshot metrics into SQLite for trend analysis |
+| `recommend` | Right-sizing recommendations + cost estimates |
+| `patch` | Generate kubectl-applyable YAML patches |
 | `forecast` | Predict resource trends and breach timelines |
-| `dashboard` | Launch the web dashboard |
+| `dashboard` | Launch the web UI |
 
-### Common Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--namespace, -n` | Kubernetes namespace | `default` |
-| `--mode, -m` | Collector: `mock`, `k8s`, `prometheus` | `k8s` |
-| `--prometheus-url, -p` | Prometheus base URL | — |
-| `--strategy, -s` | Sizing strategy: `p95`, `p99`, `max` | `p95` |
-| `--headroom` | Safety margin (0.0–1.0) | `0.20` |
-| `--top` | Number of top deployments | `10` |
-| `--lookback` | Hours of historical data | `168` (7 days) |
-
-## Role-Based Access Control
-
-Three roles control dashboard access via API keys:
-
-| Role | Landing | Accessible Pages | Permissions |
-|------|---------|-------------------|-------------|
-| Executive | `/executive` | Executive Summary, Costs | Read-only |
-| Engineer | `/overview` | All analysis pages | Read + Write |
-| Admin | `/executive` | All pages | Full access + audit |
-
-Set role-specific API keys via environment variables:
-
-```bash
-export KF_EXEC_API_KEY=exec-secret
-export KF_ENGINEER_API_KEY=eng-secret
-export KF_ADMIN_API_KEY=admin-secret
-```
-
-When no API keys are configured, all users get Admin access (dev mode).
-
-## Architecture
-
-```
-Metrics Source (K8s API / Prometheus / Mock)
-  → Collector (SQLite persistence)
-    → Analyzer (statistical profiling)
-      → Recommender (right-sizing engine)
-        → Patch Generator + Cost Estimator
-      → Forecaster (trend prediction + risk)
-  → Dashboard (FastAPI + HTMX)
-  → CLI (Typer + Rich)
-  → Alerts (Webhook + Slack)
-```
+Common flags: `--namespace/-n`, `--mode/-m {mock,k8s,prometheus}`, `--prometheus-url/-p`, `--strategy/-s {p95,p99,max}`, `--headroom 0.20`, `--top 10`, `--lookback 168`.
 
 ## Deployment
 
@@ -152,43 +93,41 @@ docker run -p 8080:8080 kube-foresight dashboard --host 0.0.0.0 --port 8080 --de
 helm install kube-foresight charts/kube-foresight \
   --set collector.mode=k8s \
   --set collector.namespaces=production \
-  --set dashboard.adminApiKey=your-secret-key \
   --set scheduler.enabled=true
 ```
 
-See `charts/kube-foresight/values.yaml` for all options including persistence, ingress, alerting, and role-based API keys.
+See [`charts/kube-foresight/values.yaml`](charts/kube-foresight/values.yaml) for persistence, ingress, alerting, and authentication options.
 
 ## Configuration
 
-All configuration is via `KF_` environment variables. Key options:
+All settings are environment variables prefixed `KF_`:
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `KF_MODE` | Collector mode | `k8s` |
+| `KF_MODE` | Collector mode (`mock`, `k8s`, `prometheus`) | `k8s` |
 | `KF_NAMESPACES` | Comma-separated namespaces | `default` |
-| `KF_CLOUD_PROVIDER` | Pricing: `aws`, `gcp`, `azure` | `aws` |
-| `KF_SCHEDULER_ENABLED` | Background scheduler | `false` |
+| `KF_CLOUD_PROVIDER` | Pricing source: `aws`, `gcp`, `azure` | `aws` |
+| `KF_SCHEDULER_ENABLED` | Background collect/analyze loop | `false` |
 | `KF_COLLECT_INTERVAL` | Collection interval (seconds) | `300` |
 | `KF_ANALYSIS_INTERVAL` | Analysis interval (seconds) | `900` |
-| `KF_WEBHOOK_URL` | Alert webhook endpoint | — |
-| `KF_SLACK_WEBHOOK_URL` | Slack incoming webhook | — |
-| `KF_LOG_FORMAT` | Log format: `text`, `json` | `text` |
+| `KF_SLACK_WEBHOOK_URL` | Slack alerts for at-risk deployments | — |
+| `KF_LOG_FORMAT` | `text` or `json` | `text` |
+
+Multi-tenant dashboard authentication (Executive / Engineer / Admin API keys) is documented in [`docs/auth.md`](docs/auth.md). For single-user evaluation, no setup is required.
 
 ## Development
 
 ```bash
-# Install with all extras
+git clone https://github.com/pallaprolus/kube-foresight && cd kube-foresight
 pip install -e ".[k8s,dashboard,dev]"
-
-# Run tests (276 tests)
-pytest tests/ -v --tb=short
-
-# Lint
+pytest tests/ -v --tb=short        # 276 tests
 ruff check .
-
-# Helm chart
 helm lint charts/kube-foresight
 ```
+
+## Contributing
+
+Issues and PRs are very welcome — particularly: real-world deployment reports, additional pricing providers, and validation of forecast accuracy on production traces. See [`CONTRIBUTING.md`](CONTRIBUTING.md) once filed.
 
 ## License
 
