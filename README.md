@@ -60,7 +60,7 @@ kube-foresight forecast -n production --mode k8s
 - **Forecasting** — linear regression on historical usage with breach-time prediction and risk classification
 - **Multi-cloud cost estimation** — AWS / GCP / Azure pricing side-by-side
 - **Patch generator** — strategic-merge YAML you can `kubectl apply`
-- **Web dashboard** — FastAPI + HTMX + Chart.js (executive summary, recommendations, costs)
+- **Web dashboard** — FastAPI + HTMX + Chart.js (overview, recommendations, cost comparison)
 - **HPA conflict detection** — refuses to recommend changes that fight your autoscaler
 - **Production plumbing** — Dockerfile, Helm chart, health probes, structured JSON logs, optional Slack alerts
 
@@ -113,14 +113,12 @@ All settings are environment variables prefixed `KF_`:
 | `KF_SLACK_WEBHOOK_URL` | Slack alerts for at-risk deployments | — |
 | `KF_LOG_FORMAT` | `text` or `json` | `text` |
 
-Multi-tenant dashboard authentication (Executive / Engineer / Admin API keys) is documented in [`docs/auth.md`](docs/auth.md). For single-user evaluation, no setup is required.
-
 ## Development
 
 ```bash
 git clone https://github.com/pallaprolus/kube-foresight && cd kube-foresight
 pip install -e ".[k8s,dashboard,dev]"
-pytest tests/ -v --tb=short        # 276 tests
+pytest tests/ -v --tb=short        # 248 tests
 ruff check .
 helm lint charts/kube-foresight
 ```
