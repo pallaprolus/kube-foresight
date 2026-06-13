@@ -1,3 +1,7 @@
+# Downloaded benchmark trace data (multi-GB) — never commit
+/alibaba-2018/
+/benchmarks/data/
+
 __pycache__/
 *.py[cod]
 *$py.class
