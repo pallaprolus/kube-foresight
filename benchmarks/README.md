@@ -37,13 +37,27 @@ python -m benchmarks.backtest --source alibaba --trace-dir benchmarks/fixtures
 
 ## Running against the real Alibaba trace
 
-1. Download **cluster-trace-v2018** from
-   [alibaba/clusterdata](https://github.com/alibaba/clusterdata/blob/master/cluster-trace-v2018/trace_2018.md).
-   You need three files in one directory: `machine_meta.csv`,
-   `container_meta.csv`, `container_usage.csv`. (`container_usage.csv` is large —
-   the harness streams it; use `--max-app-groups` / `--max-usage-rows` to sample.)
+### 1. Fetch the data
 
-2. Run:
+The harness needs three files from **cluster-trace-v2018** in one directory:
+`machine_meta.csv`, `container_meta.csv`, `container_usage.csv`. The helper
+script downloads exactly those (skipping ~21 GB of files we don't use) and, by
+default, *samples* the 28 GB usage archive to the first 40M rows without a full
+extract:
+
+```bash
+benchmarks/fetch_alibaba.sh                   # → ./alibaba-2018, sampled usage
+benchmarks/fetch_alibaba.sh --full ~/traces   # full usage series instead
+```
+
+It uses the same OSS URLs as Alibaba's official `fetchData.sh`
+([alibaba/clusterdata](https://github.com/alibaba/clusterdata/blob/master/cluster-trace-v2018/trace_2018.md));
+their blessed route asks for a short survey first. Confirm the three `.csv`
+files landed (`ls ./alibaba-2018`) before running.
+
+### 2. Run
+
+```bash
 
 ```bash
 python -m benchmarks.backtest \
