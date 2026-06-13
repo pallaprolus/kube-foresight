@@ -2,12 +2,56 @@
 
 from __future__ import annotations
 
-from kube_foresight.models import DeploymentProfile, Recommendation, SizingCategory
+from kube_foresight.models import DeploymentProfile, Recommendation, ResourceSpec, UsageStats
 from kube_foresight.recommender.strategies import determine_confidence, recommend_by_percentile
 
 # Minimum floors: 10m CPU, 16Mi memory
 _CPU_FLOOR = 0.01
 _MEM_FLOOR = 16 * 1024 * 1024
+
+# p95-utilization thresholds (match analyzer.profiler.classify_sizing):
+# below this fraction of request → over-provisioned, above → under-provisioned.
+_OVER_THRESHOLD = 0.3
+_UNDER_THRESHOLD = 0.8
+
+
+def _resource_direction(p95: float, request: float) -> str:
+    """Decide sizing direction for a single resource from its p95 utilization.
+
+    CPU and memory are sized independently — a deployment can be wasteful on CPU
+    while pinned at its memory limit, and each resource should be addressed on
+    its own merits rather than forced to share one deployment-wide direction.
+    """
+    if request <= 0:
+        return "hold"
+    ratio = p95 / request
+    if ratio < _OVER_THRESHOLD:
+        return "down"
+    if ratio > _UNDER_THRESHOLD:
+        return "up"
+    return "hold"
+
+
+def _size_resource(
+    direction: str,
+    stats: UsageStats,
+    spec: ResourceSpec,
+    strategy: str,
+    headroom: float,
+    floor: float,
+) -> tuple[float, float]:
+    """Recommended (request, limit) for one resource; unchanged when held."""
+    if direction == "hold":
+        return spec.request, spec.limit
+    return recommend_by_percentile(
+        stats=stats,
+        current_request=spec.request,
+        current_limit=spec.limit,
+        percentile=strategy,
+        headroom=headroom,
+        floor=floor,
+        direction=direction,
+    )
 
 
 def generate_recommendations(
@@ -19,31 +63,18 @@ def generate_recommendations(
     recommendations: list[Recommendation] = []
 
     for profile in profiles:
-        # Skip right-sized deployments — no recommendation needed
-        if profile.sizing_category == SizingCategory.RIGHT_SIZED:
+        cpu_dir = _resource_direction(profile.cpu_stats.p95, profile.cpu_spec.request)
+        mem_dir = _resource_direction(profile.memory_stats.p95, profile.memory_spec.request)
+
+        # Skip only when BOTH resources are already right-sized.
+        if cpu_dir == "hold" and mem_dir == "hold":
             continue
 
-        direction = (
-            "up" if profile.sizing_category == SizingCategory.UNDER_PROVISIONED else "down"
+        rec_cpu_req, rec_cpu_lim = _size_resource(
+            cpu_dir, profile.cpu_stats, profile.cpu_spec, strategy, headroom, _CPU_FLOOR
         )
-
-        rec_cpu_req, rec_cpu_lim = recommend_by_percentile(
-            stats=profile.cpu_stats,
-            current_request=profile.cpu_spec.request,
-            current_limit=profile.cpu_spec.limit,
-            percentile=strategy,
-            headroom=headroom,
-            floor=_CPU_FLOOR,
-            direction=direction,
-        )
-        rec_mem_req, rec_mem_lim = recommend_by_percentile(
-            stats=profile.memory_stats,
-            current_request=profile.memory_spec.request,
-            current_limit=profile.memory_spec.limit,
-            percentile=strategy,
-            headroom=headroom,
-            floor=_MEM_FLOOR,
-            direction=direction,
+        rec_mem_req, rec_mem_lim = _size_resource(
+            mem_dir, profile.memory_stats, profile.memory_spec, strategy, headroom, _MEM_FLOOR
         )
 
         cpu_reduction = (

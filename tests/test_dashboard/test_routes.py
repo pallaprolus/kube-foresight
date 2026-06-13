@@ -155,8 +155,9 @@ def test_api_analyze_mock(client):
     assert data["namespace"] == "test-ns"
     assert data["analyzed_deployments"] == 15
     assert len(data["profiles"]) == 15
-    assert len(data["recommendations"]) == 13  # right-sized get no recs
-    assert len(data["costs"]) == 13  # right-sized get no cost estimates
+    # Only deployments right-sized on BOTH CPU and memory are skipped.
+    assert len(data["recommendations"]) == 14
+    assert len(data["costs"]) == 14
     assert data["total_monthly_savings_usd"] > 0
 
 

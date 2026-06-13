@@ -89,3 +89,39 @@ def test_under_provisioned_recommends_increase():
     assert rec.recommended_cpu_request >= rec.current_cpu_request
     # Negative reduction = increase
     assert rec.cpu_reduction_pct <= 0
+
+
+def test_resources_sized_independently():
+    """CPU over-provisioned + memory at its limit → cut CPU, raise memory.
+
+    The deployment classifies as under-provisioned overall (memory pins it), but
+    the wasteful CPU must still be cut rather than vetoed by the memory signal.
+    """
+    profile = DeploymentProfile(
+        name="cpu-waste-mem-tight",
+        container_name="app",
+        namespace="default",
+        replica_count=1,
+        cpu_stats=UsageStats(
+            mean=0.1, median=0.1, p95=0.12, p99=0.15,
+            max=0.2, min=0.05, std_dev=0.03, sample_count=2016,
+        ),
+        memory_stats=UsageStats(
+            mean=950e6, median=950e6, p95=1e9, p99=1e9,
+            max=1e9, min=900e6, std_dev=20e6, sample_count=2016,
+        ),
+        cpu_spec=ResourceSpec(request=1.0, limit=1.0),
+        memory_spec=ResourceSpec(request=1024 * 1024 * 1024, limit=1024 * 1024 * 1024),
+        cpu_utilization_ratio=0.1,
+        memory_utilization_ratio=0.93,
+        over_provisioning_score=0.5,
+        sizing_category=SizingCategory.UNDER_PROVISIONED,
+    )
+    recs = generate_recommendations([profile])
+    assert len(recs) == 1
+    rec = recs[0]
+    # CPU is cut (positive reduction), memory is raised (negative reduction).
+    assert rec.recommended_cpu_request < rec.current_cpu_request
+    assert rec.cpu_reduction_pct > 0
+    assert rec.recommended_memory_request >= rec.current_memory_request
+    assert rec.memory_reduction_pct <= 0

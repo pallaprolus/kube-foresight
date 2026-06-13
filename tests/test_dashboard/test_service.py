@@ -34,8 +34,9 @@ def test_run_analysis_mock(service):
     assert report.namespace == "test-ns"
     # All 15 deployments are now analyzed (not just top N)
     assert report.analyzed_deployments == 15
-    # Recommendations generated for non-right-sized deployments (13 over-provisioned)
-    assert len(report.recommendations) == 13
+    # Recommendations for every deployment with at least one resource to resize
+    # (only those right-sized on both CPU and memory are skipped).
+    assert len(report.recommendations) == 14
 
 
 def test_get_report_after_analysis(service):
@@ -83,8 +84,8 @@ def test_get_timeseries_data_not_found(service):
 def test_get_all_patches(service):
     service.run_analysis(mode="mock", namespace="test-ns", top_n=5, seed=42)
     patches = service.get_all_patches()
-    # Patches for all non-right-sized deployments (13 over-provisioned)
-    assert len(patches) == 13
+    # Patches for every deployment with at least one resource to resize.
+    assert len(patches) == 14
     for p in patches:
         assert "name" in p
         assert "yaml" in p
