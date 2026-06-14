@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=64.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "kube-foresight"
-version = "0.3.0"
+version = "0.3.1"
 description = "Predictive Resource Optimizer for Kubernetes — identifies over-provisioned deployments and generates right-sizing patches"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -62,6 +62,12 @@ Issues = "https://github.com/pallaprolus/kube-foresight/issues"
 [tool.setuptools.packages.find]
 include = ["kube_foresight*"]
 exclude = ["tests*"]
+
+# Ship the dashboard's templates and static assets in the wheel — without this
+# `kube-foresight dashboard` fails on a non-editable (PyPI) install because the
+# StaticFiles/Jinja directories are absent.
+[tool.setuptools.package-data]
+"kube_foresight.dashboard" = ["templates/**/*", "static/**/*"]
 
 [tool.ruff]
 line-length = 100
