@@ -6,11 +6,11 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![PyPI](https://img.shields.io/pypi/v/kube-foresight.svg)](https://pypi.org/project/kube-foresight/)
-[![Status](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
+[![Status](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/pallaprolus/kube-foresight/releases)
 
 ![Dashboard overview](docs/screenshots/overview.png)
 
-## Why kube-foresight?
+## What it does
 
 Most teams over-provision Kubernetes by 40–70% out of fear of outages — and fixing it usually means stitching several tools together: one to recommend new resources, another to apply them, another to watch for future breaches, another to price the change.
 
@@ -18,30 +18,28 @@ kube-foresight runs that whole loop in a single CLI and dashboard:
 
 > **recommendation → kubectl-ready patch → breach forecast → multi-cloud cost**
 
-You get the patch to apply, a prediction of when usage will breach current limits, and the capacity you'd reclaim priced across AWS / GCP / Azure — from one tool instead of four.
+It reads live usage from your Metrics API or Prometheus, recommends right-sized requests and limits, emits a patch you review and `kubectl apply`, predicts when usage will breach current limits, and prices the reclaimed capacity across AWS / GCP / Azure.
 
-## Status
+**Status:** Alpha — actively developed, not yet battle-tested in production. Issues and PRs welcome; see [releases](https://github.com/pallaprolus/kube-foresight/releases).
 
-**Alpha — actively developed, not yet battle-tested in production.** Reports, issues, and PRs welcome. See [CHANGELOG / releases](https://github.com/pallaprolus/kube-foresight/releases).
-
-## Try it in 30 seconds (no cluster needed)
+## Install
 
 ```bash
-pip install "kube-foresight[dashboard]"
-kube-foresight demo                 # full pipeline against synthetic data
-kube-foresight dashboard --demo     # web UI at http://localhost:8080
+pip install "kube-foresight[dashboard]"   # Python 3.10+
 ```
 
-![Recommendations view](docs/screenshots/recommendations.png)
+Prefer a container? See [Deployment](#deployment).
 
-## Use it on a real cluster
+## Use it on your cluster
+
+kube-foresight reads usage from the **Kubernetes Metrics API** (via metrics-server) or **Prometheus**. It never edits workloads itself — it writes patch files you apply on your own terms.
 
 ```bash
-# 1. Identify over-provisioned deployments (Metrics API or Prometheus)
+# 1. Find over-provisioned deployments
 kube-foresight analyze   -n production --mode k8s
 kube-foresight recommend -n production --mode prometheus -p http://prometheus:9090
 
-# 2. Generate kubectl-ready patches
+# 2. Generate kubectl-ready patches — review, then apply
 kube-foresight patch -n production --mode k8s -o ./patches
 kubectl apply -f ./patches/api-gateway-patch.yaml
 
@@ -49,15 +47,35 @@ kubectl apply -f ./patches/api-gateway-patch.yaml
 kube-foresight forecast -n production --mode k8s
 ```
 
+### Preview without a cluster
+
+See the full pipeline and dashboard against representative sample workloads — no cluster, RBAC, or metrics-server required:
+
+```bash
+kube-foresight demo                 # full pipeline, sample data
+kube-foresight dashboard --demo     # web UI at http://localhost:8080
+```
+
+![Recommendations view](docs/screenshots/recommendations.png)
+
+## Why trust the recommendations
+
+Right-sizing is only useful if it doesn't cause the outages teams over-provision to avoid. kube-foresight is built defensively:
+
+- **It never auto-applies.** It recommends and generates patches; every change to your cluster is one you trigger (`kubectl apply`, or the dashboard's apply action).
+- **Sizes on real demand.** Recommendations use p95 / p99 of observed usage with configurable headroom, computed on raw data so demand spikes aren't discarded — under-provisioning is the dangerous error, so it errs toward the tail.
+- **Per-resource.** CPU and memory are sized independently; a CPU-wasteful workload pinned at its memory limit gets its CPU cut without touching memory.
+- **HPA-aware.** It refuses to recommend changes that would fight a HorizontalPodAutoscaler.
+- **Backtested.** Recommendations are validated against a public production trace (Alibaba 2018) with a held-out train/test split. The methodology and results are in [`benchmarks/`](benchmarks/README.md).
+
 ## What's in the box
 
-- **Three collectors** — Kubernetes Metrics API, Prometheus, or mock (for demo / CI)
-- **Statistical right-sizing** — p95 / p99 / max strategies (p99 default) with configurable headroom, sizing CPU and memory independently on raw usage so demand spikes aren't discarded
-- **Forecasting** — linear regression on historical usage with breach-time prediction and risk classification
-- **Multi-cloud cost estimation** — prices the CPU/memory you'd reclaim at approximate on-demand rates for AWS / GCP / Azure
+- **Three collectors** — Kubernetes Metrics API, Prometheus, or mock (demo / CI)
+- **Statistical right-sizing** — p95 / p99 / max strategies (p99 default), CPU and memory sized independently with configurable headroom
+- **Forecasting** — linear-regression breach-time prediction with risk classification
+- **Multi-cloud cost estimation** — prices reclaimable CPU/memory at approximate on-demand rates for AWS / GCP / Azure
 - **Patch generator** — strategic-merge YAML you can `kubectl apply`
 - **Web dashboard** — FastAPI + HTMX + Chart.js (overview, recommendations, cost comparison)
-- **HPA conflict detection** — refuses to recommend changes that fight your autoscaler
 - **Production plumbing** — Dockerfile, Helm chart, health probes, structured JSON logs, optional Slack alerts
 
 > **How costs are calculated:** figures reflect reclaimable capacity — the difference between current and recommended **requests**, priced at approximate blended on-demand rates for the selected provider. Translating reclaimed capacity into billing changes depends on node consolidation by the cluster autoscaler; pair with Kubecost/OpenCost for allocation-accurate spend.
@@ -77,7 +95,7 @@ kube-foresight's niche is bringing right-sizing, breach forecasting, kubectl pat
 
 | Command | Purpose |
 |---------|---------|
-| `demo` | Full pipeline with synthetic data — no cluster required |
+| `demo` | Full pipeline with sample data — no cluster required |
 | `analyze` | Identify over-provisioned deployments |
 | `collect` | Snapshot metrics into SQLite for trend analysis |
 | `recommend` | Right-sizing recommendations + cost estimates |
