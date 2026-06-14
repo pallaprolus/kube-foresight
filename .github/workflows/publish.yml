@@ -9,8 +9,14 @@ permissions:
   contents: read
 
 jobs:
+  # Nothing publishes unless the release gate passes (tests, lint, build, and a
+  # clean-room install + dashboard smoke test against the built wheel).
+  gate:
+    uses: ./.github/workflows/release-gate.yml
+
   build:
     name: Build sdist and wheel
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +58,7 @@ jobs:
 
   docker:
     name: Build and push image to GHCR
+    needs: gate
     runs-on: ubuntu-latest
     permissions:
       contents: read

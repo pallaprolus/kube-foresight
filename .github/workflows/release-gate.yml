@@ -1,0 +1,67 @@
+# Release gate — the checks that MUST pass before a version is published.
+#
+# Authored as a reusable workflow (`workflow_call`) so it can be lifted into a
+# central repo and referenced from every project with a single `uses:` line:
+#   jobs:
+#     gate:
+#       uses: <owner>/release-tools/.github/workflows/release-gate.yml@v1
+#
+# The clean-room install step is the important one: it installs the BUILT WHEEL
+# into a fresh environment and actually starts the app — which catches packaging
+# bugs (e.g. data files missing from the wheel) that editable installs hide.
+name: Release gate
+
+on:
+  workflow_call:
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install (with dev + dashboard extras)
+        run: pip install -e ".[k8s,dashboard,dev]" build
+
+      - name: Tests
+        run: pytest tests/ -q
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Build sdist + wheel
+        run: python -m build
+
+      - name: Clean-room install + smoke test
+        run: |
+          set -euo pipefail
+          python -m venv /tmp/gate
+          /tmp/gate/bin/pip install "$(ls dist/*.whl)[dashboard]"
+
+          # CLI entry point resolves and runs from the installed wheel.
+          /tmp/gate/bin/kube-foresight --help > /dev/null
+          echo "CLI ok"
+
+          # Dashboard serves from the installed wheel — this fails if the wheel
+          # is missing templates/static (the bug that shipped in 0.2.0–0.3.0).
+          /tmp/gate/bin/kube-foresight dashboard --demo \
+            --host 127.0.0.1 --port 8088 > /tmp/gate-dash.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:8088/healthz && break || sleep 1
+          done
+          health=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8088/healthz)
+          static=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8088/static/js/app.js)
+          echo "healthz=$health static=$static"
+          if [ "$health" != "200" ] || [ "$static" != "200" ]; then
+            echo "::error::Dashboard smoke test failed (healthz=$health static=$static)"
+            cat /tmp/gate-dash.log
+            exit 1
+          fi
+          echo "Dashboard ok"
