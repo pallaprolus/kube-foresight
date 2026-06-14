@@ -17,8 +17,9 @@ def compute_usage_stats(values: list[float]) -> UsageStats:
     signal, not noise: a request set below a real demand spike causes CPU
     throttling or OOM kills, so under-provisioning is the dangerous error.
     The percentile strategies (p95/p99) are themselves tail-robust, and
-    computing ``std_dev``/``mean`` on raw data keeps the confidence signal
-    (coefficient of variation) honest rather than artificially deflated.
+    computing ``std_dev``/``mean`` on raw data keeps the coefficient-of-variation
+    confidence signal representative of the true variability rather than
+    artificially low.
 
     Filtering of genuinely spurious readings (e.g. impossible values from a
     metrics-collection glitch) belongs at the collector layer, not here.

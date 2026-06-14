@@ -35,7 +35,7 @@ kube_foresight/
 │   └── store.py           #   SQLite metrics storage
 ├── analyzer/              # Statistical profiling
 │   ├── profiler.py        #   Profile + classify + rank deployments
-│   └── stats.py           #   p95/p99/max + IQR anomaly filtering
+│   └── stats.py           #   p95/p99/max on raw usage (tail preserved)
 ├── recommender/           # Right-sizing engine
 │   ├── engine.py          #   Orchestrates recommendations
 │   ├── strategies.py      #   p95, p99, max strategies

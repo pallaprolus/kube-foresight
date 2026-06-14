@@ -10,8 +10,8 @@ Methodology (the standard right-sizing evaluation, cf. VPA / Google Autopilot):
        recommended request (request breach → contention/throttling) or limit
        (limit breach → OOM kill for memory). Lower is safer.
      - savings %      = how much the recommendation shrinks the request.
-   A good tool achieves high savings with low violations. The tension between
-   the two is the whole game; reporting either alone is misleading.
+   A good tool achieves high savings with low violations; both are reported
+   together because the trade-off between them is the point.
 
 Run ``python -m benchmarks.backtest --help``.
 """

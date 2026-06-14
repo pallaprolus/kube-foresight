@@ -1,6 +1,6 @@
 # kube-foresight
 
-**Right-size your Kubernetes deployments, forecast resource trends, and see the multi-cloud cost impact — in one tool, with kubectl-ready patches.**
+**Right-size your Kubernetes deployments, forecast resource trends, and estimate the multi-cloud cost impact — in one tool, with kubectl-ready patches.**
 
 [![CI](https://github.com/pallaprolus/kube-foresight/actions/workflows/ci.yml/badge.svg)](https://github.com/pallaprolus/kube-foresight/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -22,7 +22,7 @@ Most teams over-provision Kubernetes by 40–70% out of fear of outages. Existin
 | VPA (native) | ✅ | — auto-applies | — | — |
 | Kubecost / OpenCost | partial | — | — | ✅ |
 
-If you're already happy with KRR for recommendations and Kubecost for spend, you don't need this. **kube-foresight exists for the case where you want a single CLI / dashboard that says "here's the patch, here's when you'll breach, and here's the dollar delta on AWS vs GCP vs Azure."**
+If you're already happy with KRR for recommendations and Kubecost for spend, you don't need this. **kube-foresight exists for the case where you want a single CLI / dashboard that says "here's the patch, here's when you'll breach, and here's the capacity you'd reclaim priced across AWS / GCP / Azure."**
 
 ## Status
 
@@ -56,13 +56,15 @@ kube-foresight forecast -n production --mode k8s
 ## What's in the box
 
 - **Three collectors** — Kubernetes Metrics API, Prometheus, or mock (for demo / CI)
-- **Statistical right-sizing** — p95 / p99 / max strategies with IQR anomaly filtering and configurable headroom
+- **Statistical right-sizing** — p95 / p99 / max strategies (p99 default) with configurable headroom, sizing CPU and memory independently on raw usage so demand spikes aren't discarded
 - **Forecasting** — linear regression on historical usage with breach-time prediction and risk classification
-- **Multi-cloud cost estimation** — AWS / GCP / Azure pricing side-by-side
+- **Multi-cloud cost estimation** — prices the CPU/memory you'd reclaim at approximate on-demand rates for AWS / GCP / Azure
 - **Patch generator** — strategic-merge YAML you can `kubectl apply`
 - **Web dashboard** — FastAPI + HTMX + Chart.js (overview, recommendations, cost comparison)
 - **HPA conflict detection** — refuses to recommend changes that fight your autoscaler
 - **Production plumbing** — Dockerfile, Helm chart, health probes, structured JSON logs, optional Slack alerts
+
+> **How costs are calculated:** figures reflect reclaimable capacity — the difference between current and recommended **requests**, priced at approximate blended on-demand rates for the selected provider. Translating reclaimed capacity into billing changes depends on node consolidation by the cluster autoscaler; pair with Kubecost/OpenCost for allocation-accurate spend.
 
 ## CLI reference
 
@@ -118,7 +120,7 @@ All settings are environment variables prefixed `KF_`:
 ```bash
 git clone https://github.com/pallaprolus/kube-foresight && cd kube-foresight
 pip install -e ".[k8s,dashboard,dev]"
-pytest tests/ -v --tb=short        # 248 tests
+pytest tests/ -v --tb=short        # 251 tests
 ruff check .
 helm lint charts/kube-foresight
 ```

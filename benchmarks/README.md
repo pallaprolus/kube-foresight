@@ -22,8 +22,8 @@ test:
   Lower is safer.
 - **savings %** — how much the recommendation shrinks the request.
 
-A good result is **high savings with near-zero violations**. Reporting either in
-isolation is misleading — that trade-off is the whole point.
+A good result is **high savings with near-zero violations**; both metrics are
+reported together because the trade-off between them is the point.
 
 ## Quick self-test (no download)
 
@@ -69,14 +69,14 @@ python -m benchmarks.backtest \
   --violation-threshold 0.05
 ```
 
-## Units — read before trusting the CPU numbers
+## Units (CPU vs memory)
 
 The Alibaba trace is normalized, so a couple of assumptions are baked into the
 adapter ([`alibaba.py`](alibaba.py)):
 
 - **Violation rate is unit-invariant.** The tool derives the recommendation from
-  the usage series itself, so recommendation and usage always share units. Trust
-  this number regardless of the assumptions below.
+  the usage series itself, so recommendation and usage always share units — this
+  metric holds regardless of the assumptions below.
 - **Memory** request (`mem_size`) and usage (`mem_util_percent`) are *both*
   percent-of-machine, so memory ratios are correct with no extra input.
   `--machine-mem-gib` only sets the byte scale (the model wants bytes); it
