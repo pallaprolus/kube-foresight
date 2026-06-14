@@ -35,11 +35,11 @@ A short asciinema cast of `kube-foresight demo` is also high-leverage.
 
 The Dockerfile is already in place. Add a workflow that builds and pushes `ghcr.io/pallaprolus/kube-foresight:<tag>` on release. This means people can `docker run` without cloning.
 
-### 4. Pick the comparison story and lead with it
+### 4. Lead with the value, keep the comparison light
 
-The README now starts with a comparison table vs Goldilocks / KRR / VPA / Kubecost. Keep that comparison **honest**:
+The README leads with the workflow — one loop from recommendation → patch → forecast → cost — and keeps a short "Where it fits" section that credits KRR / Goldilocks / VPA / Kubecost for what each does well. Anchor the pitch on the integrated workflow rather than a feature-by-feature scorecard; a checkbox grid goes stale every time a competitor ships a release and reads as a follower's framing.
 
-- If KRR adds forecasting, update the table.
+- Describe what each tool is best at, not a checkbox grid — it ages better and stays fair.
 - If a real differentiator emerges from user feedback (e.g. "the multi-cloud cost view is what made us pick this"), promote that into the headline sentence.
 
 ### 5. Write one *result* post, not an announcement post

@@ -12,17 +12,13 @@
 
 ## Why kube-foresight?
 
-Most teams over-provision Kubernetes by 40–70% out of fear of outages. Existing tools each solve a piece of this problem — kube-foresight ties the pieces together:
+Most teams over-provision Kubernetes by 40–70% out of fear of outages — and fixing it usually means stitching several tools together: one to recommend new resources, another to apply them, another to watch for future breaches, another to price the change.
 
-| Tool | Right-sizing recs | Patch output | Forecasting | Multi-cloud cost |
-|------|:-:|:-:|:-:|:-:|
-| **kube-foresight** | ✅ | ✅ kubectl YAML | ✅ breach prediction | ✅ AWS / GCP / Azure |
-| Goldilocks (Fairwinds) | ✅ | — VPA objects | — | — |
-| KRR (Robusta) | ✅ | — text suggestions | — | — |
-| VPA (native) | ✅ | — auto-applies | — | — |
-| Kubecost / OpenCost | partial | — | — | ✅ |
+kube-foresight runs that whole loop in a single CLI and dashboard:
 
-If you're already happy with KRR for recommendations and Kubecost for spend, you don't need this. **kube-foresight exists for the case where you want a single CLI / dashboard that says "here's the patch, here's when you'll breach, and here's the capacity you'd reclaim priced across AWS / GCP / Azure."**
+> **recommendation → kubectl-ready patch → breach forecast → multi-cloud cost**
+
+You get the patch to apply, a prediction of when usage will breach current limits, and the capacity you'd reclaim priced across AWS / GCP / Azure — from one tool instead of four.
 
 ## Status
 
@@ -65,6 +61,17 @@ kube-foresight forecast -n production --mode k8s
 - **Production plumbing** — Dockerfile, Helm chart, health probes, structured JSON logs, optional Slack alerts
 
 > **How costs are calculated:** figures reflect reclaimable capacity — the difference between current and recommended **requests**, priced at approximate blended on-demand rates for the selected provider. Translating reclaimed capacity into billing changes depends on node consolidation by the cluster autoscaler; pair with Kubecost/OpenCost for allocation-accurate spend.
+
+## Where it fits
+
+Several tools cover individual pieces of this well:
+
+- **[KRR](https://github.com/robusta-dev/krr)** — Prometheus-based right-sizing recommendations.
+- **[Goldilocks](https://github.com/FairwindsOps/goldilocks)** — surfaces VPA recommendations across a cluster.
+- **[VPA](https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler)** — in-cluster vertical autoscaling that can apply changes automatically.
+- **[Kubecost / OpenCost](https://www.opencost.io/)** — allocation-accurate cost monitoring and spend reporting.
+
+kube-foresight's niche is bringing right-sizing, breach forecasting, kubectl patch output, and side-by-side multi-cloud pricing into one workflow. If KRR already covers your recommendations and Kubecost your spend, you may not need it — it's for teams who'd rather run one loop than wire several tools together.
 
 ## CLI reference
 
