@@ -92,6 +92,11 @@ Common flags: `--namespace/-n`, `--mode/-m {mock,k8s,prometheus}`, `--prometheus
 ### Docker
 
 ```bash
+# Pull the published image (GitHub Container Registry)
+docker run -p 8080:8080 ghcr.io/pallaprolus/kube-foresight:latest \
+  dashboard --host 0.0.0.0 --port 8080 --demo
+
+# …or build from source
 docker build -t kube-foresight .
 docker run -p 8080:8080 kube-foresight dashboard --host 0.0.0.0 --port 8080 --demo
 ```
