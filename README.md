@@ -20,7 +20,7 @@ kube-foresight runs that whole loop in a single CLI and dashboard:
 
 It reads live usage from your Metrics API or Prometheus, recommends right-sized requests and limits, emits a patch you review and `kubectl apply`, predicts when usage will breach current limits, and prices the reclaimed capacity across AWS / GCP / Azure.
 
-**Status:** Alpha — actively developed, not yet battle-tested in production. Issues and PRs welcome; see [releases](https://github.com/pallaprolus/kube-foresight/releases).
+**Status:** Alpha — under active development. Analysis is read-only (the CLI never changes your cluster), so it's safe to evaluate against real workloads; validate recommendations before applying them at scale. Production deployment reports, issues, and PRs especially welcome.
 
 ## Install
 
