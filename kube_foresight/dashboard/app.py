@@ -71,13 +71,13 @@ def _build_scheduler_config() -> SchedulerConfig:
         )
         mode = "k8s"
 
-    strategy = os.environ.get("KF_STRATEGY", "p95")
+    strategy = os.environ.get("KF_STRATEGY", "p99")
     if strategy not in _VALID_STRATEGIES:
         logger.warning(
-            "Invalid KF_STRATEGY=%r, using 'p95'. Valid: %s",
+            "Invalid KF_STRATEGY=%r, using 'p99'. Valid: %s",
             strategy, ", ".join(sorted(_VALID_STRATEGIES)),
         )
-        strategy = "p95"
+        strategy = "p99"
 
     headroom = _safe_float("KF_HEADROOM", 0.20)
     if not 0.0 <= headroom <= 1.0:

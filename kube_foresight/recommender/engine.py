@@ -56,7 +56,7 @@ def _size_resource(
 
 def generate_recommendations(
     profiles: list[DeploymentProfile],
-    strategy: str = "p95",
+    strategy: str = "p99",
     headroom: float = 0.20,
 ) -> list[Recommendation]:
     """Generate right-sizing recommendations for a list of deployment profiles."""

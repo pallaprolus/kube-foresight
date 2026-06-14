@@ -13,7 +13,7 @@ def recommend(
     mode: str = typer.Option("prometheus", "--mode", "-m", help="Mode: prometheus, k8s, mock"),
     prometheus_url: str = typer.Option("", "--prometheus-url", "-p", help="Prometheus base URL"),
     db_path: str = typer.Option("", "--db-path", help="SQLite DB path (k8s mode)"),
-    strategy: str = typer.Option("p95", "--strategy", "-s", help="Strategy: p95, p99, max"),
+    strategy: str = typer.Option("p99", "--strategy", "-s", help="Strategy: p95, p99, max"),
     headroom: float = typer.Option(0.20, "--headroom", help="Safety margin (0.0-1.0)"),
     lookback: int = typer.Option(168, "--lookback", help="Lookback period in hours"),
     top: int = typer.Option(10, "--top", help="Number of top over-provisioned deployments"),

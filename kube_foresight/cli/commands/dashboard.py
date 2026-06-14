@@ -89,7 +89,7 @@ def dashboard(
             mode="mock",
             namespace="demo-app",
             lookback_hours=168,
-            strategy="p95",
+            strategy="p99",
             headroom=0.20,
             top_n=10,
             seed=42,

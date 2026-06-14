@@ -22,7 +22,7 @@ class SchedulerConfig:
     namespaces: list[str] = field(default_factory=lambda: ["default"])
     db_path: str | None = None
     lookback_hours: int = 168
-    strategy: str = "p95"
+    strategy: str = "p99"
     headroom: float = 0.20
     top_n: int = 10
     # Alerting

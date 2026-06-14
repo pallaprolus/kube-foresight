@@ -10,7 +10,7 @@ console = Console()
 
 def demo(
     top: int = typer.Option(10, "--top", help="Number of top over-provisioned deployments"),
-    strategy: str = typer.Option("p95", "--strategy", "-s", help="Strategy: p95, p99, max"),
+    strategy: str = typer.Option("p99", "--strategy", "-s", help="Strategy: p95, p99, max"),
     headroom: float = typer.Option(0.20, "--headroom", help="Safety margin (0.0-1.0)"),
     seed: int = typer.Option(42, "--seed", help="Random seed for reproducibility"),
     output_dir: str | None = typer.Option(

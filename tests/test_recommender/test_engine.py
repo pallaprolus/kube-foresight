@@ -21,7 +21,7 @@ def test_generate_recommendations(mock_metrics):
         assert rec.recommended_memory_request <= rec.current_memory_request
         assert rec.cpu_reduction_pct >= 0
         assert rec.memory_reduction_pct >= 0
-        assert rec.strategy == "p95"
+        assert rec.strategy == "p99"
         assert rec.headroom == 0.20
 
 
