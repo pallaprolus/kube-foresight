@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kube-foresight"
-version = "0.2.0"
+version = "0.3.0"
 description = "Predictive Resource Optimizer for Kubernetes — identifies over-provisioned deployments and generates right-sizing patches"
 readme = "README.md"
 requires-python = ">=3.10"
